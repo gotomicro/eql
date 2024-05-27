@@ -16,7 +16,6 @@ package eorm
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ecodeclub/eorm/internal/merger/batchmerger"
 
@@ -30,7 +29,7 @@ type ShardingSelector[T any] struct {
 	shardingSelectorBuilder
 	table *T
 	db    Session
-	lock  sync.Mutex
+	// lock  sync.Mutex
 }
 
 func NewShardingSelector[T any](db Session) *ShardingSelector[T] {
