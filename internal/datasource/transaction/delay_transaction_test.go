@@ -488,6 +488,8 @@ func (s *TestDelayTxTestSuite) TestExecute_Commit_Or_Rollback() {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			s.SetupTest()
+
 			tc.mockOrder(s.mockMaster, s.mockMaster2)
 			tx, err := tc.txFunc()
 			require.NoError(t, err)
@@ -508,6 +510,8 @@ func (s *TestDelayTxTestSuite) TestExecute_Commit_Or_Rollback() {
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantAffected, affected)
 			tc.afterFunc(t, tx, values)
+
+			s.TearDownTest()
 		})
 	}
 }
