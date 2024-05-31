@@ -17,7 +17,8 @@ package eorm
 import (
 	"context"
 
-	"github.com/ecodeclub/eorm/internal/merger/batchmerger"
+	"github.com/ecodeclub/eorm/internal/merger/factory"
+	"github.com/ecodeclub/eorm/internal/query"
 
 	"github.com/ecodeclub/eorm/internal/sharding"
 
@@ -27,8 +28,9 @@ import (
 
 type ShardingSelector[T any] struct {
 	shardingSelectorBuilder
-	table *T
-	db    Session
+	table        *T
+	db           Session
+	queryFeature query.Feature
 	// lock  sync.Mutex
 }
 
@@ -197,6 +199,7 @@ func (s *ShardingSelector[T]) selectAggregate(aggregate Aggregate) error {
 		s.writeString(" AS ")
 		s.quote(aggregate.alias)
 	}
+	s.queryFeature |= query.AggregateFunc
 	return nil
 }
 
@@ -248,6 +251,7 @@ func (s *ShardingSelector[T]) buildOrderBy() error {
 		s.space()
 		s.writeString(ob.order)
 	}
+	s.queryFeature |= query.OrderBy
 	return nil
 }
 
@@ -263,6 +267,7 @@ func (s *ShardingSelector[T]) buildGroupBy() error {
 		}
 		s.quote(cMeta.ColumnName)
 	}
+	s.queryFeature |= query.GroupBy
 	return nil
 }
 
@@ -301,7 +306,10 @@ func (s *ShardingSelector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 		return nil, err
 	}
 
-	mgr := batchmerger.NewMerger()
+	mgr, err := factory.New(s.queryFeature, factory.Params{})
+	if err != nil {
+		return nil, err
+	}
 	rowsList, err := s.db.queryMulti(ctx, qs)
 	if err != nil {
 		return nil, err

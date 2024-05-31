@@ -27,8 +27,10 @@ type Merger interface {
 }
 
 type ColumnInfo struct {
-	Index int
-	Name  string
+	Index         int
+	Name          string
+	IsASCOrder    bool
+	AggregateFunc string
 }
 
 func NewColumnInfo(index int, name string) ColumnInfo {

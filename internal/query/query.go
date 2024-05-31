@@ -26,3 +26,12 @@ type Query struct {
 func (q Query) String() string {
 	return fmt.Sprintf("SQL: %s\nArgs: %#v\n", q.SQL, q.Args)
 }
+
+type Feature int
+
+const (
+	AggregateFunc Feature = 1 << iota
+	GroupBy
+	OrderBy
+	Limit
+)

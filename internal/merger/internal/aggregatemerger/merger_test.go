@@ -27,7 +27,7 @@ import (
 	"github.com/ecodeclub/eorm/internal/merger"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ecodeclub/eorm/internal/merger/aggregatemerger/aggregator"
+	"github.com/ecodeclub/eorm/internal/merger/internal/aggregatemerger/aggregator"
 	"github.com/ecodeclub/eorm/internal/merger/internal/errs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package groupby_merger
+package groupbymerger
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/ecodeclub/eorm/internal/rows"
@@ -25,7 +26,7 @@ import (
 	"github.com/ecodeclub/eorm/internal/merger"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/ecodeclub/eorm/internal/merger/aggregatemerger/aggregator"
+	"github.com/ecodeclub/eorm/internal/merger/internal/aggregatemerger/aggregator"
 	"github.com/ecodeclub/eorm/internal/merger/internal/errs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,8 +34,8 @@ import (
 )
 
 var (
-	nextMockErr   error = errors.New("rows: MockNextErr")
-	aggregatorErr error = errors.New("aggregator: MockAggregatorErr")
+	nextMockErr   = errors.New("rows: MockNextErr")
+	aggregatorErr = errors.New("aggregator: MockAggregatorErr")
 )
 
 type MergerSuite struct {
@@ -116,6 +117,7 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 					require.NoError(ms.T(), err)
 					rowsList = append(rowsList, row)
 				}
+				log.Printf("rows = %#v\n", rowsList)
 				return rowsList
 			}(),
 

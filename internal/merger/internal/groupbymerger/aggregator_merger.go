@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package groupby_merger
+package groupbymerger
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 
 	"github.com/ecodeclub/ekit/mapx"
 	"github.com/ecodeclub/eorm/internal/merger"
-	"github.com/ecodeclub/eorm/internal/merger/aggregatemerger/aggregator"
+	"github.com/ecodeclub/eorm/internal/merger/internal/aggregatemerger/aggregator"
 	"github.com/ecodeclub/eorm/internal/merger/internal/errs"
 )
 

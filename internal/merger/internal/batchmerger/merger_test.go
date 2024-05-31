@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	nextMockErr error = errors.New("rows: MockNextErr")
+	nextMockErr = errors.New("rows: MockNextErr")
 )
 
 func newCloseMockErr(dbName string) error {
@@ -362,7 +362,7 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 	}
 	for _, tc := range testCases {
 		ms.T().Run(tc.name, func(t *testing.T) {
-			merger := Merger{}
+			merger := NewMerger()
 			rows, err := merger.Merge(context.Background(), tc.sqlRows())
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
