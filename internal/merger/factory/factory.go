@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/eorm/internal/merger"
@@ -13,92 +13,132 @@ import (
 	"github.com/ecodeclub/eorm/internal/merger/internal/pagedmerger"
 	"github.com/ecodeclub/eorm/internal/merger/internal/sortmerger"
 	"github.com/ecodeclub/eorm/internal/query"
+	"github.com/ecodeclub/eorm/internal/rows"
 )
 
 type (
-	// Params 解析SQL语句后可以较为容易得到的特征数据集合,各个具体merger初始化时所需要的参数的“并集”
+	// QuerySpec 解析SQL语句后可以较为容易得到的特征数据集合,各个具体merger初始化时所需要的参数的“并集”
 	// 这里有几个要点:
 	// 1. SQL的解析者能够比较容易创建Params
 	// 2. 创建merger时,直接使用其中的字段或者只需稍加变换
 	// 3. 不保留merger内部的知识,最好只与SQL标准耦合/关联
-	Params struct {
-		Select  []merger.ColumnInfo
-		GroupBy []merger.ColumnInfo
-		OrderBy []merger.ColumnInfo
-		Limit   int
-		Offset  int
+	QuerySpec struct {
+		Features []query.Feature
+		Select   []merger.ColumnInfo
+		GroupBy  []merger.ColumnInfo
+		OrderBy  []merger.ColumnInfo
+		Limit    int
+		Offset   int
 	}
 	// newMergerFunc 根据Params中的信息创建指定merger的工厂方法
-	newMergerFunc func(p Params) (merger.Merger, error)
+	newMergerFunc func(q QuerySpec) (merger.Merger, error)
 )
 
 // funcMapping 充当决策表 key为预定义的sql特征或者特征的组合(或位运算) value最终选中的merger
 // limit比较特殊未定义在决策表中,在下方New方法中先将limit特征去掉定位到merger再组合定位到merger返回组合后的Merger
 var funcMapping = map[query.Feature]newMergerFunc{
-	query.AggregateFunc:                 newAggregateMerger,
-	query.GroupBy:                       newGroupByMergerWithoutHaving,
-	query.AggregateFunc | query.GroupBy: newBatchMerger,
-	query.OrderBy:                       newOrderByMerger,
+	query.AggregateFunc: newAggregateMerger,
+	query.GroupBy:       newGroupByMergerWithoutHaving,
+	query.OrderBy:       newOrderByMerger,
 }
 
-func newBatchMerger(_ Params) (merger.Merger, error) {
+func newBatchMerger(_ QuerySpec) (merger.Merger, error) {
 	return batchmerger.NewMerger(), nil
 }
 
-func newAggregateMerger(p Params) (merger.Merger, error) {
+func newAggregateMerger(q QuerySpec) (merger.Merger, error) {
 	return aggregatemerger.NewMerger(), nil
 }
 
-func newGroupByMergerWithoutHaving(p Params) (merger.Merger, error) {
-	var err error
-	agg := slice.Map(p.GroupBy, func(idx int, src merger.ColumnInfo) aggregator.Aggregator {
+func newGroupByMergerWithoutHaving(q QuerySpec) (merger.Merger, error) {
+	var agg []aggregator.Aggregator
+	for _, src := range q.GroupBy {
+		if src.AggregateFunc == "" {
+			continue
+		}
 		switch src.AggregateFunc {
 		case "sum":
-			return aggregator.NewSum(src)
+			agg = append(agg, aggregator.NewSum(src))
 		case "count":
-			return aggregator.NewCount(src)
+			agg = append(agg, aggregator.NewCount(src))
 		case "avg":
 			// TODO 这里改写的时候Index如何设置? 是否会变?
-			return aggregator.NewAVG(merger.NewColumnInfo(src.Index, src.Name), merger.NewColumnInfo(src.Index+1, src.Name), src.Name)
+			agg = append(agg, aggregator.NewAVG(merger.NewColumnInfo(src.Index, src.Name), merger.NewColumnInfo(src.Index+1, src.Name), src.Name))
 		case "min":
-			return aggregator.NewMin(src)
+			agg = append(agg, aggregator.NewMin(src))
 		case "max":
-			return aggregator.NewMax(src)
+			agg = append(agg, aggregator.NewMax(src))
 		default:
-			err = errs.ErrMergerAggregateFuncNotFound
-			return nil
+			return nil, errs.ErrMergerAggregateFuncNotFound
 		}
-	})
-	if err != nil {
-		return nil, err
 	}
-	return groupbymerger.NewAggregatorMerger(agg, p.GroupBy), nil
+	return groupbymerger.NewAggregatorMerger(agg, q.GroupBy), nil
 }
 
-func newOrderByMerger(p Params) (merger.Merger, error) {
-	s := slice.Map(p.OrderBy, func(idx int, src merger.ColumnInfo) sortmerger.SortColumn {
+func newOrderByMerger(q QuerySpec) (merger.Merger, error) {
+	s := slice.Map(q.OrderBy, func(idx int, src merger.ColumnInfo) sortmerger.SortColumn {
 		return sortmerger.NewSortColumn(src.Name, sortmerger.Order(src.IsASCOrder))
 	})
 	return sortmerger.NewMerger(s...)
 }
 
-func newLimitMerger(m merger.Merger, p Params) (merger.Merger, error) {
+func newLimitMerger(m merger.Merger, p QuerySpec) (merger.Merger, error) {
 	return pagedmerger.NewMerger(m, p.Offset, p.Limit)
 }
 
-func New(f query.Feature, p Params) (merger.Merger, error) {
-	hasLimit := f&query.Limit != 0
-	nonLimitFeatures := f &^ query.Limit
-	newFunc, ok := funcMapping[nonLimitFeatures]
-	if !ok {
-		return nil, fmt.Errorf("%w: %v", errs.ErrMergerNotFound, f)
+func New(q QuerySpec) (merger.Merger, error) {
+	var mp = map[query.Feature]newMergerFunc{
+		query.AggregateFunc: newAggregateMerger,
+		query.GroupBy:       newGroupByMergerWithoutHaving,
+		query.OrderBy:       newOrderByMerger,
 	}
-	m, err := newFunc(p)
+	var mergers []merger.Merger
+	var prev merger.Merger
+	for _, feature := range q.Features {
+		switch feature {
+		case query.AggregateFunc, query.GroupBy, query.OrderBy:
+			m, err := mp[feature](q)
+			if err != nil {
+				return nil, err
+			}
+			mergers = append(mergers, m)
+			prev = m
+		case query.Limit:
+			if prev == nil {
+				prev = batchmerger.NewMerger()
+			}
+			m, err := newLimitMerger(prev, q)
+			if err != nil {
+				return nil, err
+			}
+			mergers = append(mergers, m)
+		}
+	}
+
+	if len(mergers) == 0 {
+		mergers = append(mergers, batchmerger.NewMerger())
+	}
+
+	return &MergerPipeline{mergers: mergers}, nil
+}
+
+type MergerPipeline struct {
+	mergers []merger.Merger
+}
+
+func (m *MergerPipeline) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, error) {
+	r, err := m.mergers[0].Merge(ctx, results)
 	if err != nil {
 		return nil, err
 	}
-	if hasLimit {
-		return newLimitMerger(m, p)
+	if len(m.mergers) == 1 {
+		return r, nil
 	}
-	return m, nil
+	for _, mg := range m.mergers[1:] {
+		r, err = mg.Merge(ctx, []rows.Rows{r})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
 }

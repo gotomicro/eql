@@ -135,6 +135,7 @@ func (s *ShardingSelector[T]) buildQuery(db, tbl, ds string) (sharding.Query, er
 	if s.limit > 0 {
 		s.writeString(" LIMIT ")
 		s.parameter(s.limit)
+		s.queryFeature |= query.Limit
 	}
 	s.end()
 	return sharding.Query{SQL: s.buffer.String(), Args: s.args, Datasource: ds, DB: db}, nil
@@ -306,7 +307,8 @@ func (s *ShardingSelector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 		return nil, err
 	}
 
-	mgr, err := factory.New(s.queryFeature, factory.Params{})
+	// mgr, err := factory.New(s.queryFeature, factory.QuerySpec{})
+	mgr, err := factory.New(factory.QuerySpec{})
 	if err != nil {
 		return nil, err
 	}
