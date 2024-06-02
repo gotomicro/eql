@@ -36,15 +36,15 @@ type (
 
 // funcMapping 充当决策表 key为预定义的sql特征或者特征的组合(或位运算) value最终选中的merger
 // limit比较特殊未定义在决策表中,在下方New方法中先将limit特征去掉定位到merger再组合定位到merger返回组合后的Merger
-var funcMapping = map[query.Feature]newMergerFunc{
-	query.AggregateFunc: newAggregateMerger,
-	query.GroupBy:       newGroupByMergerWithoutHaving,
-	query.OrderBy:       newOrderByMerger,
-}
+// var funcMapping = map[query.Feature]newMergerFunc{
+// 	query.AggregateFunc: newAggregateMerger,
+// 	query.GroupBy:       newGroupByMergerWithoutHaving,
+// 	query.OrderBy:       newOrderByMerger,
+// }
 
-func newBatchMerger(_ QuerySpec) (merger.Merger, error) {
-	return batchmerger.NewMerger(), nil
-}
+// func newBatchMerger(_ QuerySpec) (merger.Merger, error) {
+// 	return batchmerger.NewMerger(), nil
+// }
 
 func newAggregateMerger(q QuerySpec) (merger.Merger, error) {
 	return aggregatemerger.NewMerger(), nil
@@ -102,10 +102,12 @@ func New(q QuerySpec) (merger.Merger, error) {
 				return nil, err
 			}
 			mergers = append(mergers, m)
-			prev = m
 		case query.Limit:
-			if prev == nil {
+			if len(mergers) == 0 {
 				prev = batchmerger.NewMerger()
+			} else {
+				prev = mergers[len(mergers)-1]
+				mergers = mergers[:len(mergers)-1]
 			}
 			m, err := newLimitMerger(prev, q)
 			if err != nil {

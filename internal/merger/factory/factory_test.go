@@ -122,7 +122,7 @@ func TestNew(t *testing.T) {
 				Limit:    10,
 			},
 			wantMergers: []merger.Merger{
-				&aggregatemerger.Merger{},
+				// &aggregatemerger.Merger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -150,7 +150,7 @@ func TestNew(t *testing.T) {
 				Limit:    10,
 			},
 			wantMergers: []merger.Merger{
-				&groupbymerger.AggregatorMerger{},
+				// &groupbymerger.AggregatorMerger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -164,7 +164,7 @@ func TestNew(t *testing.T) {
 				Limit:    10,
 			},
 			wantMergers: []merger.Merger{
-				&sortmerger.Merger{},
+				// &sortmerger.Merger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -196,7 +196,7 @@ func TestNew(t *testing.T) {
 			},
 			wantMergers: []merger.Merger{
 				&aggregatemerger.Merger{},
-				&groupbymerger.AggregatorMerger{},
+				// &groupbymerger.AggregatorMerger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -212,7 +212,7 @@ func TestNew(t *testing.T) {
 			},
 			wantMergers: []merger.Merger{
 				&aggregatemerger.Merger{},
-				&sortmerger.Merger{},
+				// &sortmerger.Merger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -228,7 +228,7 @@ func TestNew(t *testing.T) {
 			},
 			wantMergers: []merger.Merger{
 				&groupbymerger.AggregatorMerger{},
-				&sortmerger.Merger{},
+				// &sortmerger.Merger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
@@ -246,7 +246,7 @@ func TestNew(t *testing.T) {
 			wantMergers: []merger.Merger{
 				&aggregatemerger.Merger{},
 				&groupbymerger.AggregatorMerger{},
-				&sortmerger.Merger{},
+				// &sortmerger.Merger{},
 				&pagedmerger.Merger{},
 			},
 			requireErrFunc: require.NoError,
