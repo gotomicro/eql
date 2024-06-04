@@ -49,7 +49,7 @@ func (s *Sum) findSumFunc(col []any) (func([][]any, int) (any, error), error) {
 }
 
 func (s *Sum) ColumnName() string {
-	return s.sumColumnInfo.Name
+	return s.sumColumnInfo.SelectName()
 }
 
 func NewSum(info merger.ColumnInfo) *Sum {

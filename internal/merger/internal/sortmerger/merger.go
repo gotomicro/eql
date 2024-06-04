@@ -18,6 +18,7 @@ import (
 	"container/heap"
 	"context"
 	"database/sql"
+	"log"
 	"reflect"
 	"sync"
 
@@ -175,6 +176,7 @@ func (m *Merger) checkColumns(rows rows.Rows) error {
 	for _, sortColumn := range m.sortColumns.columns {
 		_, ok := colMap[sortColumn.name]
 		if !ok {
+			log.Printf("colMap = %#v, m.sortColumns = %#v\n", colMap, m.sortColumns)
 			return errs.NewInvalidSortColumn(sortColumn.name)
 		}
 	}

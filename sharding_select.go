@@ -308,7 +308,7 @@ func (s *ShardingSelector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 	}
 
 	// mgr, err := factory.New(s.queryFeature, factory.QuerySpec{})
-	mgr, err := factory.New(factory.QuerySpec{})
+	mgr, err := factory.New(factory.QuerySpec{}, factory.QuerySpec{})
 	if err != nil {
 		return nil, err
 	}

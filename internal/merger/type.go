@@ -16,6 +16,7 @@ package merger
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ecodeclub/eorm/internal/rows"
 )
@@ -29,8 +30,19 @@ type Merger interface {
 type ColumnInfo struct {
 	Index         int
 	Name          string
-	IsASCOrder    bool
 	AggregateFunc string
+	Alias         string
+	ASC           bool
+}
+
+func (c ColumnInfo) SelectName() string {
+	if c.Alias != "" {
+		return c.Alias
+	}
+	if c.AggregateFunc != "" {
+		return fmt.Sprintf("%s(%s)", c.AggregateFunc, c.Name)
+	}
+	return c.Name
 }
 
 func NewColumnInfo(index int, name string) ColumnInfo {
