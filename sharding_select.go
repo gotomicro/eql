@@ -307,8 +307,8 @@ func (s *ShardingSelector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 		return nil, err
 	}
 
-	// mgr, err := factory.New(s.queryFeature, factory.QuerySpec{})
-	mgr, err := factory.New(factory.QuerySpec{}, factory.QuerySpec{})
+	// TODO: 后续需要重构为factory.New
+	mgr, err := factory.NewBatchMerger()
 	if err != nil {
 		return nil, err
 	}

@@ -118,7 +118,7 @@ func (ms *MergerSuite) TestMerger_New() {
 	}
 	for _, tc := range testcases {
 		ms.T().Run(tc.name, func(t *testing.T) {
-			m, err := sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+			m, err := sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			require.NoError(t, err)
 			limitMerger, err := NewMerger(m, tc.offset, tc.limit)
 			assert.Equal(t, tc.wantErr, err)
@@ -143,7 +143,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 		{
 			name: "limitMerger里的Merger的Merge出错",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				return []rows.Rows{}
@@ -158,7 +158,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 		{
 			name: "初始化游标出错",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -185,7 +185,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 		{
 			name: "offset的值超过返回的数据行数",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -211,7 +211,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 		{
 			name: "超时",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -268,7 +268,7 @@ func (ms *MergerSuite) TestMerger_NextAndScan() {
 		{
 			name: "limit的行数超过了返回的总行数，",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -318,7 +318,7 @@ func (ms *MergerSuite) TestMerger_NextAndScan() {
 		{
 			name: "limit 行数小于返回的总行数",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -353,7 +353,7 @@ func (ms *MergerSuite) TestMerger_NextAndScan() {
 		{
 			name: "offset超过sqlRows列表返回的总行数",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -377,7 +377,7 @@ func (ms *MergerSuite) TestMerger_NextAndScan() {
 		{
 			name: "offset 的值为0",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -464,7 +464,7 @@ func (ms *MergerSuite) TestRows_NextAndErr() {
 		{
 			name: "有sql.Rows返回错误",
 			getMerger: func() (merger.Merger, error) {
-				return sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+				return sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 			},
 			GetRowsList: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
@@ -510,7 +510,7 @@ func (ms *MergerSuite) TestRows_ScanAndErr() {
 		r, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{r}
-		merger, err := sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+		merger, err := sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 		require.NoError(t, err)
 		limitMerger, err := NewMerger(merger, 0, 1)
 		require.NoError(t, err)
@@ -527,7 +527,7 @@ func (ms *MergerSuite) TestRows_ScanAndErr() {
 		r, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{r}
-		merger, err := sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+		merger, err := sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 		require.NoError(t, err)
 		limitMerger, err := NewMerger(merger, 0, 1)
 		require.NoError(t, err)
@@ -547,7 +547,7 @@ func (ms *MergerSuite) TestRows_Close() {
 	ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
 	ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("2").AddRow("5").CloseError(newCloseMockErr("db02")))
 	ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4").CloseError(newCloseMockErr("db03")))
-	merger, err := sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+	merger, err := sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 	require.NoError(ms.T(), err)
 	limitMerger, err := NewMerger(merger, 1, 6)
 	require.NoError(ms.T(), err)
@@ -598,7 +598,7 @@ func (ms *MergerSuite) TestRows_Columns() {
 	ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
 	ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("2"))
 	ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4"))
-	merger, err := sortmerger.NewMerger(sortmerger.NewSortColumn("id", sortmerger.ASC))
+	merger, err := sortmerger.NewMerger(false, sortmerger.NewSortColumn("id", sortmerger.ASC))
 	require.NoError(ms.T(), err)
 	limitMerger, err := NewMerger(merger, 0, 10)
 	require.NoError(ms.T(), err)

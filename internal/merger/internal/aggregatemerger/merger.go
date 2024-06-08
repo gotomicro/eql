@@ -83,6 +83,8 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
+	// TOTO: 应该返回 AVG 对应的名字和类型
+	// rowsList[0].ColumnTypes 返回 SUM, COUNT 是我们该写后的, 抽象有破口
 	return r.rowsList[0].ColumnTypes()
 }
 
@@ -179,6 +181,7 @@ func (r *Rows) Scan(dest ...any) error {
 		return errs.ErrMergerScanNotNext
 	}
 	for i := 0; i < len(dest); i++ {
+
 		err := rows.ConvertAssign(dest[i], r.cur[i])
 		if err != nil {
 			return err

@@ -404,6 +404,45 @@ func (s *factoryTestSuite) TestSELECT() {
 		requireErrFunc require.ErrorAssertionFunc
 		after          func(t *testing.T, rows rows.Rows, expectedColumnNames []string)
 	}{
+		// 非法情况
+		{
+			sql: "应该报错_QuerySpec.Select列为空",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{},
+			targetSpec: QuerySpec{},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrEmptyColumnList)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.Select中有非法列",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Select: []merger.ColumnInfo{
+					{
+						Index: 1,
+						Name:  "COUNT(`amount`)",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Select: []merger.ColumnInfo{
+					{
+						Index: 1,
+						Name:  "COUNT(`amount`)",
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrInvalidColumnInfo)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
 		{
 			sql: "SELECT `id`,`status` FROM `orders`",
 			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
@@ -466,6 +505,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				}, s.getRowValues(t, r, scanFunc))
 			},
 		},
+		// 别名
 		{
 			sql: "SELECT SUM(`amount`) AS `total_amount`, COUNT(*) AS `cnt_amount` FROM `orders`",
 			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
@@ -533,6 +573,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				}, s.getRowValues(t, r, scanFunc))
 			},
 		},
+		// 聚合函数
 		{
 			sql: "SELECT MIN(`amount`),MAX(`amount`),AVG(`amount`),SUM(`amount`),COUNT(`amount`) FROM `orders` WHERE (`order_id` > 10 AND `amount` > 20) OR `order_id` > 100 OR `amount` > 30",
 			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
@@ -636,6 +677,83 @@ func (s *factoryTestSuite) TestSELECT() {
 				}, s.getRowValues(t, r, scanFunc))
 			},
 		},
+		// ORDER BY
+		{
+			sql: "应该报错_QuerySpec.OrderBy为空",
+			// SELECT `ctime` FROM `orders` ORDER BY `ctime` DESC
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrEmptyColumnList)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.OrderBy中的列不在QuerySpec.Select列表中",
+			// TODO: ORDER BY中的列不在SELECT列表中
+			//       - SELECT * FROM `orders` ORDER BY `ctime` DESC
+			//       - SELECT `user_id`, `order_id` FROM `orders` ORDER BY `ctime`;
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`order_id`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						ASC:   true,
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`order_id`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						ASC:   true,
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrColumnNotFoundInSelectList)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
 		{
 			sql: "SELECT `user_id` AS `uid`,`order_id` AS `oid` FROM `orders` ORDER BY `uid`, `oid` DESC",
 			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
@@ -734,11 +852,1173 @@ func (s *factoryTestSuite) TestSELECT() {
 				}, s.getRowValues(t, r, scanFunc))
 			},
 		},
-		// order by 和 与聚合列组合
-		// order by 列为空,返回error
-		// order by 列不在select 列表中 返回错误
+		// TODO: ORDER BY 和 与聚合列组合,原始SQL中ORDER BY中用别名`avg_amt`,目标SQL的ORDER BY该如何该写?
 		// {
-		// 	sql: "SELECT `user_id`, AVG(`amount`), COUNT(*) FROM `orders` GROUP BY `user_id` ORDER BY `ctime` OFFSET 0 Limit 20",
+		// 	sql: "SELECT AVG(`amount`) AS `avg_amt` FROM `orders` ORDER BY `avg_amt`",
+		//
+		// 	before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+		// 		t.Helper()
+		// 		targetSQL := "SELECT SUM(`amount`), COUNT(`amount`) FROM `orders` ORDER BY SUM(`amount`), COUNT(`amount`)"
+		// 		cols := []string{"SUM(`amount`)", "COUNT(`amount`)"}
+		// 		s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(200, 4))
+		// 		s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(150, 2))
+		// 		s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(40, 1))
+		// 		return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+		// 	},
+		// 	originSpec: QuerySpec{
+		// 		Features: []query.Feature{query.AggregateFunc, query.OrderBy},
+		// 		Select: []merger.ColumnInfo{
+		// 			{
+		// 				Index:         0,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "AVG",
+		// 				Alias:         "`avg_amt`",
+		// 			},
+		// 		},
+		// 		OrderBy: []merger.ColumnInfo{
+		// 			{
+		// 				Index:         0,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "AVG",
+		// 				Alias:         "`avg_amt`",
+		// 				ASC:           true,
+		// 			},
+		// 		},
+		// 	},
+		// 	targetSpec: QuerySpec{
+		// 		Features: []query.Feature{query.AggregateFunc, query.OrderBy},
+		// 		Select: []merger.ColumnInfo{
+		// 			{
+		// 				Index:         0,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "SUM",
+		// 			},
+		// 			{
+		// 				Index:         1,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "COUNT",
+		// 			},
+		// 		},
+		// 		OrderBy: []merger.ColumnInfo{
+		// 			// pipline中的后者,需要根据原SQL中的Orderby
+		// 			{
+		// 				Index:         0,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "SUM",
+		// 				ASC:           true,
+		// 			},
+		// 			{
+		// 				Index:         1,
+		// 				Name:          "`amount`",
+		// 				AggregateFunc: "COUNT",
+		// 				ASC:           true,
+		// 			},
+		// 		},
+		// 	},
+		// 	requireErrFunc: require.NoError,
+		// 	after: func(t *testing.T, r rows.Rows, _ []string) {
+		// 		t.Helper()
+		// 		cols := []string{"`avg_amt`"}
+		// 		columnsNames, err := r.Columns()
+		// 		require.NoError(t, err)
+		// 		require.Equal(t, cols, columnsNames)
+		//
+		// 		scanFunc := func(rr rows.Rows, valSet *[]any) error {
+		// 			var avg float64
+		// 			if err := rr.Scan(&avg); err != nil {
+		// 				return err
+		// 			}
+		// 			*valSet = append(*valSet, []any{avg})
+		// 			return nil
+		// 		}
+		//
+		// 		avg := float64(200+150+40) / float64(4+2+1)
+		// 		require.Equal(t, []any{
+		// 			[]any{avg},
+		// 		}, s.getRowValues(t, r, scanFunc))
+		// 	},
+		// },
+		{
+			// TODO: 暂时用该测试用例替换上方avg案例,当avg问题修复后,该测试用例应该删除
+			sql: "SELECT COUNT(`amount`) AS `cnt_amt` FROM `orders` ORDER BY `cnt_amt`",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				// TODO: 这里如果使用COUNT(`amount`)会报错, 必须使用`cnt_amt`
+				cols := []string{"`cnt_amt`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(4))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.AggregateFunc, query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "COUNT",
+						Alias:         "`cnt_amt`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "COUNT",
+						Alias:         "`cnt_amt`",
+						ASC:           true,
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.AggregateFunc, query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "COUNT",
+						Alias:         "`cnt_amt`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "COUNT",
+						Alias:         "`cnt_amt`",
+						ASC:           true,
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var cnt int
+					if err := rr.Scan(&cnt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{cnt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{4 + 2 + 1},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// GROUP BY
+		{
+			sql: "应该报错_QuerySpec.GroupBy为空",
+			// SELECT `ctime` FROM `orders` ORDER BY `ctime` DESC
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrEmptyColumnList)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.GroupBy中的列不在QuerySpec.Select列表中",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`order_id`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						ASC:   true,
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`order_id`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						ASC:   true,
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrColumnNotFoundInSelectList)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.Select中非聚合列未出现在QuerySpec.GroupBy列表中",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+					},
+					{
+						Index: 1,
+						Name:  "`order_id`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+					},
+					{
+						Index: 1,
+						Name:  "`order_id`",
+					},
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrInvalidColumnInfo)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.Select中的聚合列不能出现在QuerySpec.GroupBy列表中",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrInvalidColumnInfo)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		// 分片键 + 别名
+		{
+			sql: "SELECT `user_id` AS `uid` FROM `orders` GROUP BY `uid`",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(3))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(17))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(4))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					if err := rr.Scan(&uid); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{1},
+					[]any{3},
+					[]any{17},
+					[]any{2},
+					[]any{4},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// 非分片键 + 别名
+		{
+			sql: "SELECT `amount` AS `order_amt` FROM `orders` GROUP BY `order_amt`",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`order_amt`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(100).AddRow(300))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(100))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(200).AddRow(400))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`amount`",
+						Alias: "`order_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`amount`",
+						Alias: "`order_amt`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`amount`",
+						Alias: "`order_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`amount`",
+						Alias: "`order_amt`",
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var orderAmt int
+					if err := rr.Scan(&orderAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{orderAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{100},
+					[]any{300},
+					[]any{200},
+					[]any{400},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// 非分片键 + 聚合 + 别名
+		{
+			sql: "SELECT `ctime` AS `date`, SUM(`amount`) FROM `orders` GROUP BY `date`",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`date`", "SUM(`amount`)"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1000, 350).AddRow(3000, 350))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1000, 250).AddRow(4000, 50))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2000, 100).AddRow(4000, 50))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var date int64
+					var sumAmt int
+					if err := rr.Scan(&date, &sumAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{date, sumAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{int64(1000), 600},
+					[]any{int64(3000), 350},
+					[]any{int64(4000), 100},
+					[]any{int64(2000), 100},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// 分片键+非分片键+聚合+别名
+		{
+			sql: "SELECT `user_id` AS `uid`, `ctime` AS `date`, SUM(`amount`) AS `total_amt` FROM `orders` GROUP BY `uid`, `date`",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`", "`date`", "SUM(`amount`)"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 1000, 350).AddRow(1, 3000, 350))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 1000, 250).AddRow(4, 4000, 50))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(6, 2000, 100).AddRow(9, 4000, 50))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					var date int64
+					var sumAmt int
+					if err := rr.Scan(&uid, &date, &sumAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid, date, sumAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{1, int64(1000), 350},
+					[]any{1, int64(3000), 350},
+					[]any{2, int64(1000), 250},
+					[]any{4, int64(4000), 50},
+					[]any{6, int64(2000), 100},
+					[]any{9, int64(4000), 50},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// GROUP BY 和 ORDER BY 组合
+		{
+			sql: "SELECT `user_id` AS `uid`, `ctime` AS `date`, SUM(`amount`) AS `total_amt` FROM `orders` GROUP BY `uid`, `date` ORDER BY `total_amt`,`uid` DESC",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`", "`date`", "`total_amt`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 3000, 350).AddRow(1, 1000, 350))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, 4000, 50).AddRow(2, 1000, 250))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(9, 4000, 50).AddRow(6, 2000, 100))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           true,
+					},
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+						ASC:   false,
+					},
+				},
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy},
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           true,
+					},
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+						ASC:   false,
+					},
+				},
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					var date int64
+					var sumAmt int
+					if err := rr.Scan(&uid, &date, &sumAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid, date, sumAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{9, int64(4000), 50},
+					[]any{4, int64(4000), 50},
+					[]any{6, int64(2000), 100},
+					[]any{2, int64(1000), 250},
+					[]any{2, int64(3000), 350},
+					[]any{1, int64(1000), 350},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// LIMIT
+		{
+			sql: "应该报错_QuerySpec.Limit小于1",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				Limit: 0,
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				Limit: 0,
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrInvalidLimit)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		{
+			sql: "应该报错_QuerySpec.Offset不等于0",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				return nil, nil
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				Limit:  1,
+				Offset: 3,
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+				Select: []merger.ColumnInfo{
+					{
+						Index:         0,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+					},
+				},
+				Limit:  1,
+				Offset: 3,
+			},
+			requireErrFunc: func(t require.TestingT, err error, i ...interface{}) {
+				require.ErrorIs(t, err, ErrInvalidOffset)
+			},
+			after: func(t *testing.T, r rows.Rows, cols []string) {},
+		},
+		// 组合
+		{
+			sql: "SELECT `user_id` AS `uid` FROM `orders` Limit 3 OFFSET 0",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(3))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(17))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(4))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				Limit: 3,
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				Limit: 3,
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					if err := rr.Scan(&uid); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{1},
+					[]any{3},
+					[]any{17},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		{
+			sql: "SELECT `user_id` AS `uid`, SUM(`amount`) AS `total_amt` FROM `orders` GROUP BY `uid` ORDER BY `total_amt` DESC Limit 2 OFFSET 0",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`", "`total_amt`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 100).AddRow(3, 100))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, 500).AddRow(3, 200).AddRow(4, 200))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 200).AddRow(4, 200))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           false,
+					},
+				},
+				Limit: 2,
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         1,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           false,
+					},
+				},
+				Limit: 2,
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					var sumAmt int
+					if err := rr.Scan(&uid, &sumAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid, sumAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{5, 500},
+					[]any{4, 400},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		{
+			sql: "SELECT `user_id` AS `uid`, `ctime` AS `date`, SUM(`amount`) AS `total_amt` FROM `orders` GROUP BY `uid`, `date` ORDER BY `total_amt` Limit 6 OFFSET 0",
+			before: func(t *testing.T, sql string) ([]rows.Rows, []string) {
+				t.Helper()
+				targetSQL := sql
+				cols := []string{"`uid`", "`date`", "`total_amt`"}
+				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 1000, 100).AddRow(3, 3000, 100))
+				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, 5000, 500).AddRow(3, 3000, 200).AddRow(4, 4000, 200))
+				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 2000, 200).AddRow(4, 4001, 200))
+				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+			},
+			originSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           true,
+					},
+				},
+				Limit: 6,
+			},
+			targetSpec: QuerySpec{
+				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
+
+				Select: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+					},
+				},
+				GroupBy: []merger.ColumnInfo{
+					{
+						Index: 0,
+						Name:  "`user_id`",
+						Alias: "`uid`",
+					},
+					{
+						Index: 1,
+						Name:  "`ctime`",
+						Alias: "`date`",
+					},
+				},
+				OrderBy: []merger.ColumnInfo{
+					{
+						Index:         2,
+						Name:          "`amount`",
+						AggregateFunc: "SUM",
+						Alias:         "`total_amt`",
+						ASC:           true,
+					},
+				},
+				Limit: 6,
+			},
+			requireErrFunc: require.NoError,
+			after: func(t *testing.T, r rows.Rows, cols []string) {
+				t.Helper()
+
+				columnsNames, err := r.Columns()
+				require.NoError(t, err)
+				require.Equal(t, cols, columnsNames)
+
+				scanFunc := func(rr rows.Rows, valSet *[]any) error {
+					var uid int
+					var date int
+					var sumAmt int
+					if err := rr.Scan(&uid, &date, &sumAmt); err != nil {
+						return err
+					}
+					*valSet = append(*valSet, []any{uid, date, sumAmt})
+					return nil
+				}
+
+				require.Equal(t, []any{
+					[]any{1, 1000, 100},
+					[]any{4, 4000, 200},
+					[]any{2, 2000, 200},
+					[]any{4, 4001, 200},
+					[]any{3, 3000, 300},
+					[]any{5, 5000, 500},
+				}, s.getRowValues(t, r, scanFunc))
+			},
+		},
+		// {
+		// TODO: 聚合 + 非聚合 + groupby + orderby + limit
+
+		// 	sql: "SELECT `user_id`, COUNT(`amount`) AS `order_count`, AVG(`amount`) FROM `orders` GROUP BY `user_id` ORDER BY `order_count` DESC, `user_id` DESC Limit 3 OFFSET 0",
 		// 	before: func(t *testing.T, sql string) []rows.Rows {
 		// 		t.Helper()
 		// 		targetSQL := sql
@@ -814,6 +2094,10 @@ func (s *factoryTestSuite) TestSELECT() {
 			resultSet, expectedColumnNames := tt.before(t, tt.sql)
 			m, err := New(tt.originSpec, tt.targetSpec)
 			tt.requireErrFunc(t, err)
+
+			if err != nil {
+				return
+			}
 
 			r, err := m.Merge(context.Background(), resultSet)
 			require.NoError(t, err)

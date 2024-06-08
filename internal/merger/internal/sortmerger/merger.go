@@ -18,6 +18,7 @@ import (
 	"container/heap"
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"reflect"
 	"sync"
@@ -79,15 +80,18 @@ func (s sortColumns) Len() int {
 // Merger  如果有GroupBy子句，会导致排序是给每个分组排的，那么该实现无法运作正常
 type Merger struct {
 	sortColumns
-	cols []string
+	cols       []string
+	preScanAll bool
 }
 
-func NewMerger(sortCols ...SortColumn) (*Merger, error) {
+// NewMerger preScanAll 表示是否预先扫描出结果集中的所有到内存
+func NewMerger(preScanAll bool, sortCols ...SortColumn) (*Merger, error) {
 	scs, err := newSortColumns(sortCols...)
 	if err != nil {
 		return nil, err
 	}
 	return &Merger{
+		preScanAll:  preScanAll,
 		sortColumns: scs,
 	}, nil
 }
@@ -131,18 +135,24 @@ func (m *Merger) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, err
 
 func (m *Merger) initRows(results []rows.Rows) (*Rows, error) {
 	rs := &Rows{
-		rowsList:    results,
-		sortColumns: m.sortColumns,
-		mu:          &sync.RWMutex{},
-		columns:     m.cols,
+		rowsList:     results,
+		sortColumns:  m.sortColumns,
+		mu:           &sync.RWMutex{},
+		columns:      m.cols,
+		isPreScanAll: m.preScanAll,
 	}
 	h := &Heap{
 		h:           make([]*node, 0, len(rs.rowsList)),
 		sortColumns: rs.sortColumns,
 	}
 	rs.hp = h
+	var err error
 	for i := 0; i < len(rs.rowsList); i++ {
-		err := rs.nextRows(rs.rowsList[i], i)
+		if m.preScanAll {
+			err = rs.preScanAll(rs.rowsList[i], i)
+		} else {
+			err = rs.preScanOne(rs.rowsList[i], i)
+		}
 		if err != nil {
 			_ = rs.Close()
 			return nil, err
@@ -176,7 +186,6 @@ func (m *Merger) checkColumns(rows rows.Rows) error {
 	for _, sortColumn := range m.sortColumns.columns {
 		_, ok := colMap[sortColumn.name]
 		if !ok {
-			log.Printf("colMap = %#v, m.sortColumns = %#v\n", colMap, m.sortColumns)
 			return errs.NewInvalidSortColumn(sortColumn.name)
 		}
 	}
@@ -185,6 +194,7 @@ func (m *Merger) checkColumns(rows rows.Rows) error {
 
 func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	colsInfo, err := row.ColumnTypes()
+	fmt.Printf("row err = %#v\n", err)
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +206,10 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 		for colType.Kind() == reflect.Ptr {
 			colType = colType.Elem()
 		}
+		log.Printf("colName = %s, colType = %s\n", colName, colType.String())
 		column := reflect.New(colType).Interface()
 		if sortCols.Has(colName) {
+			log.Printf("sortCols = %#v, colName = %s, colType = %s\n", sortCols, colName, colType.String())
 			sortIndex := sortCols.Find(colName)
 			sortColumns[sortIndex] = column
 		}
@@ -213,6 +225,7 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	for i := 0; i < len(columns); i++ {
 		columns[i] = reflect.ValueOf(columns[i]).Elem().Interface()
 	}
+	log.Printf("sortColumns = %#v, columns = %#v\n", sortColumns, columns)
 	return &node{
 		sortCols: sortColumns,
 		columns:  columns,
@@ -221,14 +234,15 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 }
 
 type Rows struct {
-	rowsList    []rows.Rows
-	sortColumns sortColumns
-	hp          *Heap
-	cur         *node
-	mu          *sync.RWMutex
-	lastErr     error
-	closed      bool
-	columns     []string
+	rowsList     []rows.Rows
+	sortColumns  sortColumns
+	hp           *Heap
+	cur          *node
+	mu           *sync.RWMutex
+	lastErr      error
+	closed       bool
+	columns      []string
+	isPreScanAll bool
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
@@ -251,19 +265,38 @@ func (r *Rows) Next() bool {
 		return false
 	}
 	r.cur = heap.Pop(r.hp).(*node)
-	row := r.rowsList[r.cur.index]
-	err := r.nextRows(row, r.cur.index)
-	if err != nil {
-		r.lastErr = err
-		r.mu.Unlock()
-		_ = r.Close()
-		return false
+	log.Printf("heap node = %#v\n", r.cur)
+	if !r.isPreScanAll {
+		row := r.rowsList[r.cur.index]
+		err := r.preScanOne(row, r.cur.index)
+		if err != nil {
+			r.lastErr = err
+			r.mu.Unlock()
+			_ = r.Close()
+			return false
+		}
 	}
+
 	r.mu.Unlock()
 	return true
 }
 
-func (r *Rows) nextRows(row rows.Rows, index int) error {
+func (r *Rows) preScanAll(row rows.Rows, index int) error {
+	// TODO Rows抽象之前的假设 rowList中每个sql.Rows中的数据都是已经排序过的
+	// 所以只需要读取每个sql.Rows的第一行数据,进行比较就可以得到正确答案
+	// 但当使用在pipline中时,就可能需要读取全部sql.Rows中的数据进行排序才能得到正确答案
+	// 当然可以进行针对性的优化——两种读模式,一次读一行,一次读全部
+	for row.Next() {
+		n, err := newNode(row, r.sortColumns, index)
+		if err != nil {
+			return err
+		}
+		heap.Push(r.hp, n)
+	}
+	return row.Err()
+}
+
+func (r *Rows) preScanOne(row rows.Rows, index int) error {
 	if row.Next() {
 		n, err := newNode(row, r.sortColumns, index)
 		if err != nil {
@@ -277,6 +310,7 @@ func (r *Rows) nextRows(row rows.Rows, index int) error {
 }
 
 func (r *Rows) Scan(dest ...any) error {
+	log.Printf("Scan .......")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.lastErr != nil {

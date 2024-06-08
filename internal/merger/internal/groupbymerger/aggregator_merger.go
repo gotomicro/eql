@@ -44,7 +44,7 @@ type AggregatorMerger struct {
 func NewAggregatorMerger(aggregators []aggregator.Aggregator, groupColumns []merger.ColumnInfo) *AggregatorMerger {
 	cols := make([]string, 0, len(aggregators)+len(groupColumns))
 	for _, groubyCol := range groupColumns {
-		cols = append(cols, groubyCol.Name)
+		cols = append(cols, groubyCol.SelectName())
 	}
 	for _, agg := range aggregators {
 		cols = append(cols, agg.ColumnName())
@@ -69,6 +69,10 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 	if slice.Contains[rows.Rows](results, nil) {
 		return nil, errs.ErrMergerRowsIsNull
 	}
+	columnTypes, err := results[0].ColumnTypes()
+	if err != nil {
+		return nil, err
+	}
 	dataMap, dataIndex, err := a.getCols(results)
 	if err != nil {
 		return nil, err
@@ -76,6 +80,7 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 
 	return &AggregatorRows{
 		rowsList:     results,
+		columnTypes:  columnTypes,
 		aggregators:  a.aggregators,
 		groupColumns: a.groupColumns,
 		mu:           &sync.RWMutex{},
@@ -127,6 +132,7 @@ func (a *AggregatorMerger) getCols(rowsList []rows.Rows) (*mapx.TreeMap[Key, [][
 
 type AggregatorRows struct {
 	rowsList     []rows.Rows
+	columnTypes  []*sql.ColumnType
 	aggregators  []aggregator.Aggregator
 	groupColumns []merger.ColumnInfo
 	dataMap      *mapx.TreeMap[Key, [][]any]
@@ -140,7 +146,7 @@ type AggregatorRows struct {
 }
 
 func (a *AggregatorRows) ColumnTypes() ([]*sql.ColumnType, error) {
-	return a.rowsList[0].ColumnTypes()
+	return a.columnTypes, nil
 }
 
 func (*AggregatorRows) NextResultSet() bool {
