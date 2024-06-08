@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"slices"
 	"strings"
 
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/ecodeclub/eorm/internal/merger"
 	"github.com/ecodeclub/eorm/internal/merger/internal/aggregatemerger"
 	"github.com/ecodeclub/eorm/internal/merger/internal/aggregatemerger/aggregator"
@@ -86,7 +86,7 @@ func (q QuerySpec) isValidColumnInfo(c merger.ColumnInfo) bool {
 }
 
 func (q QuerySpec) validateGroupBy() error {
-	if !slices.Contains(q.Features, query.GroupBy) {
+	if !slice.Contains(q.Features, query.GroupBy) {
 		return nil
 	}
 	if len(q.GroupBy) == 0 {
@@ -98,15 +98,15 @@ func (q QuerySpec) validateGroupBy() error {
 		}
 		// 清除ASC
 		c.ASC = false
-		if !slices.Contains(q.Select, c) {
+		if !slice.Contains(q.Select, c) {
 			return fmt.Errorf("%w: groupby %v", ErrColumnNotFoundInSelectList, c.Name)
 		}
 	}
 	for _, c := range q.Select {
-		if c.AggregateFunc == "" && !slices.Contains(q.GroupBy, c) {
+		if c.AggregateFunc == "" && !slice.Contains(q.GroupBy, c) {
 			return fmt.Errorf("%w: 非聚合列 %v 必须出现在groupby列表中", ErrInvalidColumnInfo, c.Name)
 		}
-		if c.AggregateFunc != "" && slices.Contains(q.GroupBy, c) {
+		if c.AggregateFunc != "" && slice.Contains(q.GroupBy, c) {
 			return fmt.Errorf("%w: 聚合列 %v 不能出现在groupby列表中", ErrInvalidColumnInfo, c.Name)
 		}
 	}
@@ -114,7 +114,7 @@ func (q QuerySpec) validateGroupBy() error {
 }
 
 func (q QuerySpec) validateOrderBy() error {
-	if !slices.Contains(q.Features, query.OrderBy) {
+	if !slice.Contains(q.Features, query.OrderBy) {
 		return nil
 	}
 	if len(q.OrderBy) == 0 {
@@ -127,7 +127,7 @@ func (q QuerySpec) validateOrderBy() error {
 		}
 		// 清除ASC
 		c.ASC = false
-		if !slices.Contains(q.Select, c) {
+		if !slice.Contains(q.Select, c) {
 			return fmt.Errorf("%w: orderby %v", ErrColumnNotFoundInSelectList, c.Name)
 		}
 	}
@@ -135,7 +135,7 @@ func (q QuerySpec) validateOrderBy() error {
 }
 
 func (q QuerySpec) validateLimit() error {
-	if !slices.Contains(q.Features, query.Limit) {
+	if !slice.Contains(q.Features, query.Limit) {
 		return nil
 	}
 	if q.Limit < 1 {
@@ -204,7 +204,7 @@ func newOrderByMerger(origin, target QuerySpec) (merger.Merger, error) {
 	}
 
 	var isScanAll bool
-	if slices.Contains(target.Features, query.GroupBy) {
+	if slice.Contains(target.Features, query.GroupBy) {
 		isScanAll = true
 	}
 
