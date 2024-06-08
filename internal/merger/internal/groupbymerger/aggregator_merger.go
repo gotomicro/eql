@@ -69,6 +69,7 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 	if slice.Contains[rows.Rows](results, nil) {
 		return nil, errs.ErrMergerRowsIsNull
 	}
+	// TODO: 无奈之举, 下方getCols会ScanAll然后出问题, 需要写测试覆盖
 	columnTypes, err := results[0].ColumnTypes()
 	if err != nil {
 		return nil, err
@@ -146,6 +147,8 @@ type AggregatorRows struct {
 }
 
 func (a *AggregatorRows) ColumnTypes() ([]*sql.ColumnType, error) {
+	// TODO: 这里是为了让测试通过的临时处理方法,貌似merger会先将
+	//       正常应该先判断closed是否为true, 然后再a.rowsList[0].ColumnTypes()
 	return a.columnTypes, nil
 }
 
