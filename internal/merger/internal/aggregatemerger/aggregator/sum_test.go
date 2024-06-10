@@ -81,14 +81,15 @@ func TestSum_Aggregate(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			sum := NewSum(merger.NewColumnInfo(tc.sumIndex, "SUM(id)"))
+			info := merger.ColumnInfo{Index: tc.sumIndex, Name: "id", AggregateFunc: "SUM"}
+			sum := NewSum(info)
 			val, err := sum.Aggregate(tc.input)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return
 			}
 			assert.Equal(t, tc.wantVal, val)
-			assert.Equal(t, "SUM(id)", sum.ColumnName())
+			assert.Equal(t, info, sum.ColumnInfo())
 		})
 	}
 

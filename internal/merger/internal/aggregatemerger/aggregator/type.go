@@ -14,6 +14,8 @@
 
 package aggregator
 
+import "github.com/ecodeclub/eorm/internal/merger"
+
 type AggregateElement interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64
 }
@@ -21,6 +23,8 @@ type AggregateElement interface {
 type Aggregator interface {
 	// Aggregate 将多个列聚合 cols表示sqlRows列表里的数据，聚合函数通过下标拿到需要的列
 	Aggregate(cols [][]any) (any, error)
-	// ColumnName 聚合函数的别名
-	ColumnName() string
+	// ColumnInfo 聚合列的信息
+	ColumnInfo() merger.ColumnInfo
+	// Name 聚合函数本身的名称, MIN/MAX/SUM/COUNT/AVG
+	Name() string
 }

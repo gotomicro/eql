@@ -47,8 +47,12 @@ func (m *Max) findMaxFunc(col []any) (func([][]any, int) (any, error), error) {
 	return countFunc, nil
 }
 
-func (m *Max) ColumnName() string {
-	return m.maxColumnInfo.SelectName()
+func (m *Max) ColumnInfo() merger.ColumnInfo {
+	return m.maxColumnInfo
+}
+
+func (m *Max) Name() string {
+	return "MAX"
 }
 
 func NewMax(info merger.ColumnInfo) *Max {

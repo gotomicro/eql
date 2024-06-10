@@ -25,17 +25,17 @@ import (
 // AVG 用于求平均值，通过sum/count求得。
 // AVG 我们并不能预期在不同的数据库上，精度会不会损失，以及损失的话会有多少的损失。这很大程度上跟数据库类型，数据库驱动实现都有关
 type AVG struct {
+	avgColumnInfo   merger.ColumnInfo
 	sumColumnInfo   merger.ColumnInfo
 	countColumnInfo merger.ColumnInfo
-	avgName         string
 }
 
 // NewAVG sumInfo是sum的信息，countInfo是count的信息，avgName用于Column方法
-func NewAVG(sumInfo merger.ColumnInfo, countInfo merger.ColumnInfo, avgName string) *AVG {
+func NewAVG(avgInfo, sumInfo, countInfo merger.ColumnInfo) *AVG {
 	return &AVG{
+		avgColumnInfo:   avgInfo,
 		sumColumnInfo:   sumInfo,
 		countColumnInfo: countInfo,
-		avgName:         avgName,
 	}
 }
 
@@ -63,8 +63,12 @@ func (a *AVG) findAvgFunc(col []any) (func([][]any, int, int) (float64, error), 
 	return val, nil
 }
 
-func (a *AVG) ColumnName() string {
-	return a.avgName
+func (a *AVG) ColumnInfo() merger.ColumnInfo {
+	return a.avgColumnInfo
+}
+
+func (a *AVG) Name() string {
+	return "AVG"
 }
 
 // avgAggregator cols就是上面Aggregate的入参cols可以参Aggregate的描述

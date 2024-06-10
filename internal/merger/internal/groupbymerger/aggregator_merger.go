@@ -37,21 +37,27 @@ import (
 
 type AggregatorMerger struct {
 	aggregators  []aggregator.Aggregator
+	avgIndexes   []int
 	groupColumns []merger.ColumnInfo
 	columnsName  []string
 }
 
 func NewAggregatorMerger(aggregators []aggregator.Aggregator, groupColumns []merger.ColumnInfo) *AggregatorMerger {
 	cols := make([]string, 0, len(aggregators)+len(groupColumns))
-	for _, groubyCol := range groupColumns {
-		cols = append(cols, groubyCol.SelectName())
+	idx := make([]int, 0, len(aggregators))
+	for _, c := range groupColumns {
+		cols = append(cols, c.SelectName())
 	}
 	for _, agg := range aggregators {
-		cols = append(cols, agg.ColumnName())
+		if agg.Name() == "AVG" {
+			idx = append(idx, agg.ColumnInfo().Index)
+		}
+		cols = append(cols, agg.ColumnInfo().SelectName())
 	}
 
 	return &AggregatorMerger{
 		aggregators:  aggregators,
+		avgIndexes:   idx,
 		groupColumns: groupColumns,
 		columnsName:  cols,
 	}
@@ -69,7 +75,7 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 	if slice.Contains[rows.Rows](results, nil) {
 		return nil, errs.ErrMergerRowsIsNull
 	}
-	// TODO: 无奈之举, 下方getCols会ScanAll然后出问题, 需要写测试覆盖
+	// TODO: 无奈之举, 下方getCols会ScanAll然后将results中的sql.Rows关闭, 需要写测试覆盖
 	columnTypes, err := results[0].ColumnTypes()
 	if err != nil {
 		return nil, err
@@ -83,6 +89,7 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 		rowsList:     results,
 		columnTypes:  columnTypes,
 		aggregators:  a.aggregators,
+		avgIndexes:   a.avgIndexes,
 		groupColumns: a.groupColumns,
 		mu:           &sync.RWMutex{},
 		dataMap:      dataMap,
@@ -135,6 +142,7 @@ type AggregatorRows struct {
 	rowsList     []rows.Rows
 	columnTypes  []*sql.ColumnType
 	aggregators  []aggregator.Aggregator
+	avgIndexes   []int
 	groupColumns []merger.ColumnInfo
 	dataMap      *mapx.TreeMap[Key, [][]any]
 	cur          int
@@ -147,9 +155,24 @@ type AggregatorRows struct {
 }
 
 func (a *AggregatorRows) ColumnTypes() ([]*sql.ColumnType, error) {
-	// TODO: 这里是为了让测试通过的临时处理方法,貌似merger会先将
-	//       正常应该先判断closed是否为true, 然后再a.rowsList[0].ColumnTypes()
-	return a.columnTypes, nil
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.closed {
+		return nil, errs.ErrMergerRowsClosed
+	}
+
+	if len(a.avgIndexes) == 0 {
+		return a.columnTypes, nil
+	}
+
+	v := make([]*sql.ColumnType, 0, len(a.columnTypes))
+	var prev int
+	for i := 0; i < len(a.avgIndexes); i++ {
+		idx := a.avgIndexes[i]
+		v = append(v, a.columnTypes[prev:idx+1]...)
+		prev = idx + 3
+	}
+	return v, nil
 }
 
 func (*AggregatorRows) NextResultSet() bool {

@@ -170,7 +170,7 @@ func newAggregateMerger(origin, target QuerySpec) (merger.Merger, error) {
 	return aggregatemerger.NewMerger(aggregators...), nil
 }
 
-func getAggregators(origin QuerySpec, target QuerySpec) []aggregator.Aggregator {
+func getAggregators(_, target QuerySpec) []aggregator.Aggregator {
 	var aggregators []aggregator.Aggregator
 	for i := 0; i < len(target.Select); i++ {
 		c := target.Select[i]
@@ -181,12 +181,11 @@ func getAggregators(origin QuerySpec, target QuerySpec) []aggregator.Aggregator 
 		case "MAX":
 			aggregators = append(aggregators, aggregator.NewMax(c))
 			log.Printf("max index = %d\n", c.Index)
+		case "AVG":
+			aggregators = append(aggregators, aggregator.NewAVG(c, target.Select[i+1], target.Select[i+2]))
+			i += 2
+			log.Printf("avg index = %d\n", c.Index)
 		case "SUM":
-			if i < len(origin.Select) && strings.ToUpper(origin.Select[i].AggregateFunc) == "AVG" {
-				aggregators = append(aggregators, aggregator.NewAVG(c, target.Select[i+1], origin.Select[i].SelectName()))
-				i += 1
-				continue
-			}
 			aggregators = append(aggregators, aggregator.NewSum(c))
 			log.Printf("sum index = %d\n", c.Index)
 		case "COUNT":
@@ -217,13 +216,13 @@ func newOrderByMerger(origin, target QuerySpec) (merger.Merger, error) {
 		columns = append(columns, s)
 	}
 
-	var isScanAll bool
+	var isPreScanAll bool
 	if slice.Contains(target.Features, query.GroupBy) {
-		isScanAll = true
+		isPreScanAll = true
 	}
 
 	log.Printf("sortColumns = %#v\n", columns)
-	return sortmerger.NewMerger(isScanAll, columns...)
+	return sortmerger.NewMerger(isPreScanAll, columns...)
 }
 
 func New(origin, target QuerySpec) (merger.Merger, error) {

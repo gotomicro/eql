@@ -18,7 +18,6 @@ import (
 	"container/heap"
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"reflect"
 	"sync"
@@ -84,7 +83,8 @@ type Merger struct {
 	preScanAll bool
 }
 
-// NewMerger preScanAll 表示是否预先扫描出结果集中的所有到内存
+// NewMerger
+// preScanAll为true 表示需要预先扫描出结果集中的所有数据到内存才能得到正确结果,为false每次只需要扫描一行即可得到正确结果
 func NewMerger(preScanAll bool, sortCols ...SortColumn) (*Merger, error) {
 	scs, err := newSortColumns(sortCols...)
 	if err != nil {
@@ -147,6 +147,11 @@ func (m *Merger) initRows(results []rows.Rows) (*Rows, error) {
 	}
 	rs.hp = h
 	var err error
+	columnTypes, err := rs.rowsList[0].ColumnTypes()
+	if err != nil {
+		return nil, err
+	}
+	rs.columnTypes = columnTypes
 	for i := 0; i < len(rs.rowsList); i++ {
 		if m.preScanAll {
 			err = rs.preScanAll(rs.rowsList[i], i)
@@ -194,7 +199,6 @@ func (m *Merger) checkColumns(rows rows.Rows) error {
 
 func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	colsInfo, err := row.ColumnTypes()
-	fmt.Printf("row err = %#v\n", err)
 	if err != nil {
 		return nil, err
 	}
@@ -206,10 +210,8 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 		for colType.Kind() == reflect.Ptr {
 			colType = colType.Elem()
 		}
-		log.Printf("colName = %s, colType = %s\n", colName, colType.String())
 		column := reflect.New(colType).Interface()
 		if sortCols.Has(colName) {
-			log.Printf("sortCols = %#v, colName = %s, colType = %s\n", sortCols, colName, colType.String())
 			sortIndex := sortCols.Find(colName)
 			sortColumns[sortIndex] = column
 		}
@@ -225,7 +227,6 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	for i := 0; i < len(columns); i++ {
 		columns[i] = reflect.ValueOf(columns[i]).Elem().Interface()
 	}
-	log.Printf("sortColumns = %#v, columns = %#v\n", sortColumns, columns)
 	return &node{
 		sortCols: sortColumns,
 		columns:  columns,
@@ -235,6 +236,7 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 
 type Rows struct {
 	rowsList     []rows.Rows
+	columnTypes  []*sql.ColumnType
 	sortColumns  sortColumns
 	hp           *Heap
 	cur          *node
@@ -246,7 +248,12 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
-	return r.rowsList[0].ColumnTypes()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.closed {
+		return nil, errs.ErrMergerRowsClosed
+	}
+	return r.columnTypes, nil
 }
 
 func (*Rows) NextResultSet() bool {
@@ -265,7 +272,6 @@ func (r *Rows) Next() bool {
 		return false
 	}
 	r.cur = heap.Pop(r.hp).(*node)
-	log.Printf("heap node = %#v\n", r.cur)
 	if !r.isPreScanAll {
 		row := r.rowsList[r.cur.index]
 		err := r.preScanOne(row, r.cur.index)
@@ -282,10 +288,6 @@ func (r *Rows) Next() bool {
 }
 
 func (r *Rows) preScanAll(row rows.Rows, index int) error {
-	// TODO Rows抽象之前的假设 rowList中每个sql.Rows中的数据都是已经排序过的
-	// 所以只需要读取每个sql.Rows的第一行数据,进行比较就可以得到正确答案
-	// 但当使用在pipline中时,就可能需要读取全部sql.Rows中的数据进行排序才能得到正确答案
-	// 当然可以进行针对性的优化——两种读模式,一次读一行,一次读全部
 	for row.Next() {
 		n, err := newNode(row, r.sortColumns, index)
 		if err != nil {

@@ -47,8 +47,12 @@ func (s *Count) findCountFunc(col []any) (func([][]any, int) (any, error), error
 	return countFunc, nil
 }
 
-func (s *Count) ColumnName() string {
-	return s.countInfo.SelectName()
+func (s *Count) ColumnInfo() merger.ColumnInfo {
+	return s.countInfo
+}
+
+func (s *Count) Name() string {
+	return "COUNT"
 }
 
 func NewCount(info merger.ColumnInfo) *Count {

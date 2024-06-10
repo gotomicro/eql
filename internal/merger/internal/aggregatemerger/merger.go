@@ -18,6 +18,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"sync"
 	_ "unsafe"
 
@@ -34,16 +35,23 @@ import (
 type Merger struct {
 	aggregators []aggregator.Aggregator
 	colNames    []string
+	avgIndexes  []int
 }
 
 func NewMerger(aggregators ...aggregator.Aggregator) *Merger {
 	cols := make([]string, 0, len(aggregators))
+	idx := make([]int, 0, len(aggregators))
 	for _, agg := range aggregators {
-		cols = append(cols, agg.ColumnName())
+		info := agg.ColumnInfo()
+		if agg.Name() == "AVG" {
+			idx = append(idx, info.Index)
+		}
+		cols = append(cols, info.SelectName())
 	}
 	return &Merger{
 		aggregators: aggregators,
 		colNames:    cols,
+		avgIndexes:  idx,
 	}
 }
 
@@ -63,9 +71,11 @@ func (m *Merger) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, err
 	return &Rows{
 		rowsList:    results,
 		aggregators: m.aggregators,
+		avgIndexes:  m.avgIndexes,
 		mu:          &sync.RWMutex{},
-		// 聚合函数AVG传递到各个sql.Rows时会被转化为SUM和COUNT，这是一个对外不可见的转化。
-		// 所以merger.Rows的列名及顺序是由上方aggregator出现的顺序及ColumnName()的返回值决定的而不是sql.Rows。
+		// 原SQL中的聚合函数AVG传递到各个sql.Rows时会被转化为目标SQL中的AVG,SUM和COUNT三个列，这是一个对外不可见的转化。
+		// 其中AVG仅用于获取ColumnType,真正的结果值是基于SUM和COUNT计算得到的
+		// 所以设置aggregators要与目标SQL对齐, 而得到的merger.Rows应该与原SQL对齐的而不是目标SQL.
 		columns: m.colNames,
 	}, nil
 
@@ -74,6 +84,7 @@ func (m *Merger) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, err
 type Rows struct {
 	rowsList    []rows.Rows
 	aggregators []aggregator.Aggregator
+	avgIndexes  []int
 	closed      bool
 	mu          *sync.RWMutex
 	lastErr     error
@@ -83,9 +94,26 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
-	// TOTO: 应该返回 AVG 对应的名字和类型
-	// rowsList[0].ColumnTypes 返回 SUM, COUNT 是我们该写后的, 抽象有破口
-	return r.rowsList[0].ColumnTypes()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.closed {
+		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
+	}
+	ts, err := r.rowsList[0].ColumnTypes()
+	if err != nil {
+		return nil, err
+	}
+	if len(r.avgIndexes) == 0 {
+		return ts, nil
+	}
+	v := make([]*sql.ColumnType, 0, len(ts))
+	var prev int
+	for i := 0; i < len(r.avgIndexes); i++ {
+		idx := r.avgIndexes[i]
+		v = append(v, ts[prev:idx+1]...)
+		prev = idx + 3
+	}
+	return v, nil
 }
 
 func (*Rows) NextResultSet() bool {
@@ -153,6 +181,7 @@ func (r *Rows) getSqlRowsData() ([][]any, error) {
 	}
 	return rowsData, nil
 }
+
 func (*Rows) getSqlRowData(row rows.Rows) ([]any, error) {
 	var colsData []any
 	var err error

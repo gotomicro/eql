@@ -80,14 +80,15 @@ func TestCount_Aggregate(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			count := NewCount(merger.NewColumnInfo(tc.countIndex, "COUNT(id)"))
+			info := merger.ColumnInfo{Index: tc.countIndex, Name: "id", AggregateFunc: "COUNT"}
+			count := NewCount(info)
 			val, err := count.Aggregate(tc.input)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return
 			}
 			assert.Equal(t, tc.wantVal, val)
-			assert.Equal(t, "COUNT(id)", count.ColumnName())
+			assert.Equal(t, info, count.ColumnInfo())
 		})
 	}
 

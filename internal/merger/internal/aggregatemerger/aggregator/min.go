@@ -48,8 +48,12 @@ func (m *Min) findMinFunc(col []any) (func([][]any, int) (any, error), error) {
 	return minFunc, nil
 }
 
-func (m *Min) ColumnName() string {
-	return m.minColumnInfo.SelectName()
+func (m *Min) ColumnInfo() merger.ColumnInfo {
+	return m.minColumnInfo
+}
+
+func (m *Min) Name() string {
+	return "MIN"
 }
 
 func NewMin(info merger.ColumnInfo) *Min {

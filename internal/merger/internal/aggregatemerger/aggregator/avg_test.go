@@ -36,34 +36,39 @@ func TestAvg_Aggregate(t *testing.T) {
 			name: "avg正常合并",
 			input: [][]any{
 				{
+					float64(10) / float64(2),
 					int64(10),
 					int64(2),
 				},
 				{
+					float64(20) / float64(2),
 					int64(20),
 					int64(2),
 				},
 				{
+					float64(30) / float64(2),
 					int64(30),
 					int64(2),
 				},
 			},
-			index:   []int{0, 1},
+			index:   []int{0, 1, 2},
 			wantVal: float64(10),
 		},
 		{
 			name: "传入的参数非AggregateElement类型",
 			input: [][]any{
 				{
+					"1.5",
 					"1",
 					"2",
 				},
 				{
+					"0.75",
 					"3",
 					"4",
 				},
 			},
-			index:   []int{0, 1},
+			index:   []int{0, 1, 2},
 			wantErr: errs.ErrMergerAggregateFuncNotFound,
 		},
 		{
@@ -78,20 +83,23 @@ func TestAvg_Aggregate(t *testing.T) {
 					int64(2),
 				},
 			},
-			index:   []int{0, 10},
+			index:   []int{0, 3, 10},
 			wantErr: errs.ErrMergerInvalidAggregateColumnIndex,
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			avg := NewAVG(merger.NewColumnInfo(tc.index[0], "SUM(grade)"), merger.NewColumnInfo(tc.index[1], "COUNT(grade)"), "AVG(grade)")
+			avgColumnInfo := merger.ColumnInfo{Index: tc.index[0], Name: "`grade`", AggregateFunc: "AVG"}
+			avg := NewAVG(avgColumnInfo,
+				merger.ColumnInfo{Index: tc.index[1], Name: "`grade`", AggregateFunc: "SUM"},
+				merger.ColumnInfo{Index: tc.index[2], Name: "`grade`", AggregateFunc: "COUNT"})
 			val, err := avg.Aggregate(tc.input)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return
 			}
 			assert.Equal(t, tc.wantVal, val)
-			assert.Equal(t, "AVG(grade)", avg.ColumnName())
+			assert.Equal(t, avgColumnInfo, avg.ColumnInfo())
 		})
 	}
 

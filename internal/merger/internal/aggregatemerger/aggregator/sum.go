@@ -48,8 +48,12 @@ func (s *Sum) findSumFunc(col []any) (func([][]any, int) (any, error), error) {
 	return sumFunc, nil
 }
 
-func (s *Sum) ColumnName() string {
-	return s.sumColumnInfo.SelectName()
+func (s *Sum) ColumnInfo() merger.ColumnInfo {
+	return s.sumColumnInfo
+}
+
+func (s *Sum) Name() string {
+	return "SUM"
 }
 
 func NewSum(info merger.ColumnInfo) *Sum {

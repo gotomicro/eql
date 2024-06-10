@@ -79,14 +79,15 @@ func TestMin_Aggregate(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			min := NewMin(merger.NewColumnInfo(tc.minIndex, "MIN(id)"))
-			val, err := min.Aggregate(tc.input)
+			info := merger.ColumnInfo{Index: tc.minIndex, Name: "id", AggregateFunc: "MIN"}
+			m := NewMin(info)
+			val, err := m.Aggregate(tc.input)
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return
 			}
 			assert.Equal(t, tc.wantVal, val)
-			assert.Equal(t, "MIN(id)", min.ColumnName())
+			assert.Equal(t, info, m.ColumnInfo())
 		})
 	}
 
