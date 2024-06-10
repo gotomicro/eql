@@ -98,11 +98,11 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 		{
 			name: "正常案例",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(2, "id")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 2, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "county"),
-				merger.NewColumnInfo(1, "gender"),
+				{Index: 0, Name: "county"},
+				{Index: 1, Name: "gender"},
 			},
 			rowsList: func() []rows.Rows {
 				query := "SELECT `county`,`gender`,SUM(`id`) FROM `t1` GROUP BY `country`,`gender`"
@@ -129,10 +129,10 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 		{
 			name: "超时",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(1, "id")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "user_name"),
+				{Index: 0, Name: "user_name"},
 			},
 			rowsList: func() []rows.Rows {
 				query := "SELECT `user_name`,SUM(`id`) FROM `t1` GROUP BY `user_name`"
@@ -158,10 +158,13 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 		{
 			name: "rowsList为空",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(1, "id")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "user_name"),
+				{
+					Index: 0,
+					Name:  "user_name",
+				},
 			},
 			rowsList: func() []rows.Rows {
 				return []rows.Rows{}
@@ -175,10 +178,10 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 		{
 			name: "rowsList中有nil",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(1, "id")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "user_name"),
+				{Index: 0, Name: "user_name"},
 			},
 			rowsList: func() []rows.Rows {
 				return []rows.Rows{nil}
@@ -192,10 +195,10 @@ func (ms *MergerSuite) TestAggregatorMerger_Merge() {
 		{
 			name: "rowsList中有sql.Rows返回错误",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(1, "id")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "user_name"),
+				{Index: 0, Name: "user_name"},
 			},
 			rowsList: func() []rows.Rows {
 				query := "SELECT `user_name`,SUM(`id`) FROM `t1` GROUP BY `user_name`"
@@ -281,10 +284,10 @@ func (ms *MergerSuite) TestAggregatorRows_NextAndScan() {
 		{
 			name: "同一组数据在同一个sql.Rows中",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewCount(merger.NewColumnInfo(1, "COUNT(id)")),
+				aggregator.NewCount(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "COUNT"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "user_name"),
+				{Index: 0, Name: "user_name"},
 			},
 			rowsList: func() []rows.Rows {
 				query := "SELECT `user_name`,COUNT(`id`) FROM `t1` GROUP BY `user_name`"
@@ -319,11 +322,11 @@ func (ms *MergerSuite) TestAggregatorRows_NextAndScan() {
 		{
 			name: "多个分组列",
 			aggregators: []aggregator.Aggregator{
-				aggregator.NewSum(merger.NewColumnInfo(2, "SUM(id)")),
+				aggregator.NewSum(merger.ColumnInfo{Index: 2, Name: "id", AggregateFunc: "SUM"}),
 			},
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "county"),
-				merger.NewColumnInfo(1, "gender"),
+				{Index: 0, Name: "county"},
+				{Index: 1, Name: "gender"},
 			},
 			rowsList: func() []rows.Rows {
 				query := "SELECT `county`,`gender`,SUM(`id`) FROM `t1` GROUP BY `country`,`gender`"
@@ -466,7 +469,9 @@ func (ms *MergerSuite) TestAggregatorRows_ScanAndErr() {
 		sqlRows, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{sqlRows}
-		m := NewAggregatorMerger([]aggregator.Aggregator{aggregator.NewSum(merger.NewColumnInfo(1, "SUM(id)"))}, []merger.ColumnInfo{merger.NewColumnInfo(0, "userid")})
+		m := NewAggregatorMerger([]aggregator.Aggregator{
+			aggregator.NewSum(merger.ColumnInfo{Index: 1, Name: "id", AggregateFunc: "SUM"})},
+			[]merger.ColumnInfo{{Index: 0, Name: "userid"}})
 		r, err := m.Merge(context.Background(), rowsList)
 		require.NoError(t, err)
 		userid := 0
@@ -481,7 +486,7 @@ func (ms *MergerSuite) TestAggregatorRows_ScanAndErr() {
 		sqlRows, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{sqlRows}
-		m := NewAggregatorMerger([]aggregator.Aggregator{&mockAggregate{}}, []merger.ColumnInfo{merger.NewColumnInfo(0, "userid")})
+		m := NewAggregatorMerger([]aggregator.Aggregator{&mockAggregate{}}, []merger.ColumnInfo{{Index: 0, Name: "userid"}})
 		r, err := m.Merge(context.Background(), rowsList)
 		require.NoError(t, err)
 		userid := 0
@@ -525,7 +530,7 @@ func (ms *MergerSuite) TestAggregatorRows_NextAndErr() {
 				}
 			}(),
 			GroupByColumns: []merger.ColumnInfo{
-				merger.NewColumnInfo(0, "username"),
+				{Index: 0, Name: "username"},
 			},
 			wantErr: aggregatorErr,
 		},
@@ -592,6 +597,62 @@ func (ms *MergerSuite) TestAggregatorRows_Columns() {
 		_, err := r.Columns()
 		assert.Equal(t, errs.ErrMergerRowsClosed, err)
 	})
+}
+
+func (ms *MergerSuite) TestRows_ColumnTypes() {
+	t := ms.T()
+
+	query := "SELECT AVG(`grade`) AS `avg_grade` FROM `t1`"
+	cols := []string{"`avg_grade`", "SUM(`grade`)", "COUNT(`grade`)"}
+	ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(100, 200, 2))
+	ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(90, 270, 3))
+	ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(110, 440, 4))
+	aggregators := []aggregator.Aggregator{
+		aggregator.NewAVG(
+			merger.ColumnInfo{Index: 0, Name: "`grade`", AggregateFunc: "AVG", Alias: "`avg_grade`"},
+			merger.ColumnInfo{Index: 1, Name: "`grade`", AggregateFunc: "SUM"},
+			merger.ColumnInfo{Index: 2, Name: "`grade`", AggregateFunc: "COUNT"},
+		),
+	}
+
+	groupByColumns := []merger.ColumnInfo{
+		{
+			Index:         0,
+			Name:          "`grade`",
+			AggregateFunc: "AVG",
+			Alias:         "`avg_grade`",
+		},
+	}
+	r, err := NewAggregatorMerger(aggregators, groupByColumns).Merge(context.Background(), getResultSet(t, query, ms.mockDB01, ms.mockDB02, ms.mockDB03))
+	require.NoError(t, err)
+
+	t.Run("rows未关闭", func(t *testing.T) {
+		types, err := r.ColumnTypes()
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(types))
+		for _, typ := range types {
+			names = append(names, typ.Name())
+		}
+		require.Equal(t, []string{"`avg_grade`"}, names)
+	})
+
+	t.Run("rows已关闭", func(t *testing.T) {
+		require.NoError(t, r.Close())
+
+		_, err = r.ColumnTypes()
+		require.ErrorIs(t, err, errs.ErrMergerRowsClosed)
+	})
+}
+
+func getResultSet(t *testing.T, sql string, dbs ...*sql.DB) []rows.Rows {
+	resultSet := make([]rows.Rows, 0, len(dbs))
+	for _, db := range dbs {
+		row, err := db.Query(sql)
+		require.NoError(t, err)
+		resultSet = append(resultSet, row)
+	}
+	return resultSet
 }
 
 type mockAggregate struct {

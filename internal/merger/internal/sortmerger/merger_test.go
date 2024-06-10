@@ -67,19 +67,19 @@ func (ms *MergerSuite) TearDownTest() {
 
 func (ms *MergerSuite) initMock(t *testing.T) {
 	var err error
-	ms.mockDB01, ms.mock01, err = sqlmock.New()
+	ms.mockDB01, ms.mock01, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms.mockDB02, ms.mock02, err = sqlmock.New()
+	ms.mockDB02, ms.mock02, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms.mockDB03, ms.mock03, err = sqlmock.New()
+	ms.mockDB03, ms.mock03, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms.mockDB04, ms.mock04, err = sqlmock.New()
+	ms.mockDB04, ms.mock04, err = sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,8 +147,8 @@ func (ms *MergerSuite) TestMerger_Merge() {
 			},
 			sqlRows: func() []rows.Rows {
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows([]string{"id", "name", "address"}).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows([]string{"id", "name", "address"}).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows([]string{"id", "name", "email"}).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -170,8 +170,8 @@ func (ms *MergerSuite) TestMerger_Merge() {
 			},
 			sqlRows: func() []rows.Rows {
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows([]string{"id", "name", "address"}).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(3, "alex").AddRow(4, "x"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows([]string{"id", "name", "address"}).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(3, "alex").AddRow(4, "x"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -197,7 +197,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -238,7 +238,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -257,7 +257,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -276,7 +276,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "name", "address"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -295,7 +295,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "name", "address"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -314,7 +314,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "name", "address"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh"))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -332,9 +332,9 @@ func (ms *MergerSuite) TestMerger_Merge() {
 			sqlRows: func() []rows.Rows {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id"}
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(5))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(3))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(4).AddRow(6))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(5))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(3))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(4).AddRow(6))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -383,7 +383,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "age"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 18))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 18))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -403,9 +403,9 @@ func (ms *MergerSuite) TestMerger_Merge() {
 			sqlRows: func() []rows.Rows {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "name", "address"}
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "curry", "cn").AddRow(1, "zwl", "sh"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "alex", "cn").AddRow(3, "curry", "jp"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "bob", "tw").AddRow(6, "david", "hk"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "curry", "cn").AddRow(1, "zwl", "sh"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "alex", "cn").AddRow(3, "curry", "jp"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "bob", "tw").AddRow(6, "david", "hk"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -455,7 +455,7 @@ func (ms *MergerSuite) TestMerger_Merge() {
 				query := "SELECT * FROM `t1`;"
 				cols := []string{"id", "name", "address"}
 				res := make([]rows.Rows, 0, 1)
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh").RowError(0, nextMockErr))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "zwl", "sh").RowError(0, nextMockErr))
 				rows, _ := ms.mockDB01.QueryContext(context.Background(), query)
 				res = append(res, rows)
 				return res
@@ -505,9 +505,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "cn").AddRow(7, "b", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "cn").AddRow(7, "b", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -558,9 +558,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn").AddRow(6, "x", "cn").AddRow(1, "x", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(8, "alex", "cn").AddRow(4, "bruce", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(9, "a", "cn").AddRow(5, "abex", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn").AddRow(6, "x", "cn").AddRow(1, "x", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(8, "alex", "cn").AddRow(4, "bruce", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(9, "a", "cn").AddRow(5, "abex", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -617,10 +617,10 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "c", "cn").AddRow(2, "bruce", "cn").AddRow(2, "zwl", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "alex", "cn").AddRow(3, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "c", "cn").AddRow(3, "b", "cn").AddRow(5, "c", "cn").AddRow(7, "c", "cn"))
-				ms.mock04.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "c", "cn").AddRow(2, "bruce", "cn").AddRow(2, "zwl", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "alex", "cn").AddRow(3, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "c", "cn").AddRow(3, "b", "cn").AddRow(5, "c", "cn").AddRow(7, "c", "cn"))
+				ms.mock04.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
 				dbs := []*sql.DB{ms.mockDB04, ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -687,9 +687,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "x", "cn").AddRow(7, "b", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "x", "cn").AddRow(7, "b", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -740,9 +740,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn").AddRow(8, "b", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn").AddRow(8, "b", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -799,10 +799,10 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn").AddRow(5, "bruce", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn"))
-				ms.mock04.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn").AddRow(5, "bruce", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(7, "b", "cn"))
+				ms.mock04.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB04, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -853,9 +853,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "bruce", "cn").AddRow(7, "b", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "bruce", "cn").AddRow(7, "b", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -906,9 +906,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "bruce", "cn"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(2, "a", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "alex", "cn").AddRow(4, "x", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, "bruce", "cn"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -956,10 +956,10 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "cn").AddRow(3, "alex", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "x", "cn").AddRow(5, "bruce", "cn").AddRow(7, "b", "cn"))
-				ms.mock04.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "cn").AddRow(3, "alex", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, "x", "cn").AddRow(5, "bruce", "cn").AddRow(7, "b", "cn"))
+				ms.mock04.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03, ms.mockDB04}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -1011,10 +1011,10 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
-				ms.mock04.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
+				ms.mock04.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03, ms.mockDB04}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -1035,9 +1035,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 			sqlRows: func() []rows.Rows {
 				cols := []string{"id", "name", "address"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "hz").AddRow(3, "b", "hz").AddRow(2, "b", "cs"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "a", "cs").AddRow(1, "a", "cs").AddRow(3, "e", "cn"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "d", "hm").AddRow(5, "k", "xx").AddRow(4, "k", "xz"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "a", "hz").AddRow(3, "b", "hz").AddRow(2, "b", "cs"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(3, "a", "cs").AddRow(1, "a", "cs").AddRow(3, "e", "cn"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "d", "hm").AddRow(5, "k", "xx").AddRow(4, "k", "xz"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -1124,9 +1124,9 @@ func (ms *MergerSuite) TestRows_NextAndScan() {
 func (ms *MergerSuite) TestRows_Columns() {
 	cols := []string{"id"}
 	query := "SELECT * FROM `t1`"
-	ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
-	ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("2"))
-	ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4"))
+	ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
+	ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("2"))
+	ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4"))
 	merger, err := NewMerger(false, NewSortColumn("id", DESC))
 	require.NoError(ms.T(), err)
 	dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
@@ -1160,9 +1160,9 @@ func (ms *MergerSuite) TestRows_Columns() {
 func (ms *MergerSuite) TestRows_Close() {
 	cols := []string{"id"}
 	query := "SELECT * FROM `t1`"
-	ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
-	ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("2").CloseError(newCloseMockErr("db02")))
-	ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4").CloseError(newCloseMockErr("db03")))
+	ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
+	ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("2").CloseError(newCloseMockErr("db02")))
+	ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4").CloseError(newCloseMockErr("db03")))
 	merger, err := NewMerger(false, NewSortColumn("id", DESC))
 	require.NoError(ms.T(), err)
 	dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03}
@@ -1219,10 +1219,10 @@ func (ms *MergerSuite) TestRows_NextAndErr() {
 			rowsList: func() []rows.Rows {
 				cols := []string{"id"}
 				query := "SELECT * FROM `t1`"
-				ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
-				ms.mock02.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("2"))
-				ms.mock03.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4").RowError(1, nextMockErr))
-				ms.mock04.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow("5"))
+				ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("1"))
+				ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("2"))
+				ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("3").AddRow("4").RowError(1, nextMockErr))
+				ms.mock04.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow("5"))
 				dbs := []*sql.DB{ms.mockDB01, ms.mockDB02, ms.mockDB03, ms.mockDB04}
 				rowsList := make([]rows.Rows, 0, len(dbs))
 				for _, db := range dbs {
@@ -1256,7 +1256,7 @@ func (ms *MergerSuite) TestRows_ScanErr() {
 	ms.T().Run("未调用Next，直接Scan，返回错", func(t *testing.T) {
 		cols := []string{"id", "name", "address"}
 		query := "SELECT * FROM `t1`"
-		ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
+		ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn"))
 		r, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{r}
@@ -1271,7 +1271,7 @@ func (ms *MergerSuite) TestRows_ScanErr() {
 	ms.T().Run("迭代过程中发现错误,调用Scan，返回迭代中发现的错误", func(t *testing.T) {
 		cols := []string{"id", "name", "address"}
 		query := "SELECT * FROM `t1`"
-		ms.mock01.ExpectQuery("SELECT *").WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn").RowError(1, nextMockErr))
+		ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "abex", "cn").AddRow(5, "bruce", "cn").RowError(1, nextMockErr))
 		r, err := ms.mockDB01.QueryContext(context.Background(), query)
 		require.NoError(t, err)
 		rowsList := []rows.Rows{r}
@@ -1286,6 +1286,56 @@ func (ms *MergerSuite) TestRows_ScanErr() {
 		assert.Equal(t, nextMockErr, err)
 	})
 
+}
+
+func (ms *MergerSuite) TestRows_ColumnTypes() {
+	t := ms.T()
+
+	query := "SELECT `grade` FROM `t1` ORDER BY `grade` DESC"
+	cols := []string{"`grade`"}
+	ms.mock01.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(100))
+	ms.mock02.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(90))
+	ms.mock03.ExpectQuery(query).WillReturnRows(sqlmock.NewRows(cols).AddRow(110))
+
+	sortColumns := []SortColumn{
+		{
+			name:  "`grade`",
+			order: DESC,
+		},
+	}
+	m, err := NewMerger(true, sortColumns...)
+	require.NoError(t, err)
+
+	r, err := m.Merge(context.Background(), getResultSet(t, query, ms.mockDB01, ms.mockDB02, ms.mockDB03))
+	require.NoError(t, err)
+
+	t.Run("rows未关闭", func(t *testing.T) {
+		types, err := r.ColumnTypes()
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(types))
+		for _, typ := range types {
+			names = append(names, typ.Name())
+		}
+		require.Equal(t, []string{"`grade`"}, names)
+	})
+
+	t.Run("rows已关闭", func(t *testing.T) {
+		require.NoError(t, r.Close())
+
+		_, err = r.ColumnTypes()
+		require.ErrorIs(t, err, errs.ErrMergerRowsClosed)
+	})
+}
+
+func getResultSet(t *testing.T, sql string, dbs ...*sql.DB) []rows.Rows {
+	resultSet := make([]rows.Rows, 0, len(dbs))
+	for _, db := range dbs {
+		row, err := db.Query(sql)
+		require.NoError(t, err)
+		resultSet = append(resultSet, row)
+	}
+	return resultSet
 }
 
 type TestModel struct {

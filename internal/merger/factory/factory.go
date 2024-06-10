@@ -111,7 +111,7 @@ func (q QuerySpec) validateGroupBy() error {
 			return fmt.Errorf("%w: groupby %v", ErrInvalidColumnInfo, c.Name)
 		}
 		// 清除ASC
-		c.ASC = false
+		c.Order = merger.DESC
 		if !slice.Contains(q.Select, c) {
 			return fmt.Errorf("%w: groupby %v", ErrColumnNotFoundInSelectList, c.Name)
 		}
@@ -140,7 +140,7 @@ func (q QuerySpec) validateOrderBy() error {
 			return fmt.Errorf("%w: orderby %v", ErrInvalidColumnInfo, c.Name)
 		}
 		// 清除ASC
-		c.ASC = false
+		c.Order = merger.DESC
 		if !slice.Contains(q.Select, c) {
 			return fmt.Errorf("%w: orderby %v", ErrColumnNotFoundInSelectList, c.Name)
 		}
@@ -207,12 +207,12 @@ func newOrderByMerger(origin, target QuerySpec) (merger.Merger, error) {
 	for i := 0; i < len(target.OrderBy); i++ {
 		c := target.OrderBy[i]
 		if i < len(origin.OrderBy) && strings.ToUpper(origin.OrderBy[i].AggregateFunc) == "AVG" {
-			s := sortmerger.NewSortColumn(origin.OrderBy[i].SelectName(), sortmerger.Order(origin.OrderBy[i].ASC))
+			s := sortmerger.NewSortColumn(origin.OrderBy[i].SelectName(), sortmerger.Order(origin.OrderBy[i].Order))
 			columns = append(columns, s)
 			i++
 			continue
 		}
-		s := sortmerger.NewSortColumn(c.SelectName(), sortmerger.Order(c.ASC))
+		s := sortmerger.NewSortColumn(c.SelectName(), sortmerger.Order(c.Order))
 		columns = append(columns, s)
 	}
 

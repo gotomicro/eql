@@ -17,6 +17,7 @@ package groupbymerger
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"reflect"
 	"sync"
 	_ "unsafe"
@@ -75,7 +76,7 @@ func (a *AggregatorMerger) Merge(ctx context.Context, results []rows.Rows) (rows
 	if slice.Contains[rows.Rows](results, nil) {
 		return nil, errs.ErrMergerRowsIsNull
 	}
-	// TODO: 无奈之举, 下方getCols会ScanAll然后将results中的sql.Rows关闭, 需要写测试覆盖
+	// 下方getCols会ScanAll然后将results中的sql.Rows全部关闭,所以需要在关闭前保留列类型信息
 	columnTypes, err := results[0].ColumnTypes()
 	if err != nil {
 		return nil, err
@@ -155,10 +156,10 @@ type AggregatorRows struct {
 }
 
 func (a *AggregatorRows) ColumnTypes() ([]*sql.ColumnType, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	if a.closed {
-		return nil, errs.ErrMergerRowsClosed
+		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
 	}
 
 	if len(a.avgIndexes) == 0 {

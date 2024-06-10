@@ -18,6 +18,7 @@ import (
 	"container/heap"
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"reflect"
 	"sync"
@@ -147,6 +148,7 @@ func (m *Merger) initRows(results []rows.Rows) (*Rows, error) {
 	}
 	rs.hp = h
 	var err error
+	// 下方preScanAll会把rowsList中所有数据扫描到内存然后关闭其中所有rows.Rows,所以要提前缓存住列类型信息
 	columnTypes, err := rs.rowsList[0].ColumnTypes()
 	if err != nil {
 		return nil, err
@@ -248,10 +250,10 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.closed {
-		return nil, errs.ErrMergerRowsClosed
+		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
 	}
 	return r.columnTypes, nil
 }

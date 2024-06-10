@@ -17,6 +17,7 @@ package pagedmerger
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/ecodeclub/eorm/internal/rows"
@@ -144,6 +145,11 @@ func (r *Rows) Close() error {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
+	}
 	return r.rows.ColumnTypes()
 }
 func (r *Rows) Columns() ([]string, error) {

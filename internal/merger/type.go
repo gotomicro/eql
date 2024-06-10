@@ -27,12 +27,21 @@ type Merger interface {
 	Merge(ctx context.Context, results []rows.Rows) (rows.Rows, error)
 }
 
+type Order bool
+
+const (
+	// ASC 升序排序
+	ASC Order = true
+	// DESC 降序排序
+	DESC Order = false
+)
+
 type ColumnInfo struct {
 	Index         int
 	Name          string
 	AggregateFunc string
 	Alias         string
-	ASC           bool
+	Order         Order
 }
 
 func (c ColumnInfo) SelectName() string {
@@ -43,11 +52,4 @@ func (c ColumnInfo) SelectName() string {
 		return fmt.Sprintf("%s(%s)", c.AggregateFunc, c.Name)
 	}
 	return c.Name
-}
-
-func NewColumnInfo(index int, name string) ColumnInfo {
-	return ColumnInfo{
-		Index: index,
-		Name:  name,
-	}
 }

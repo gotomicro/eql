@@ -17,6 +17,7 @@ package batchmerger
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/ecodeclub/eorm/internal/rows"
@@ -88,6 +89,11 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
+	}
 	return r.rowsList[0].ColumnTypes()
 }
 

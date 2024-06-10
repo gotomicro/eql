@@ -94,8 +94,8 @@ type Rows struct {
 }
 
 func (r *Rows) ColumnTypes() ([]*sql.ColumnType, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.closed {
 		return nil, fmt.Errorf("%w", errs.ErrMergerRowsClosed)
 	}
