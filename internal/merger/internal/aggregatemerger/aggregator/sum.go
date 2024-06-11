@@ -23,6 +23,7 @@ import (
 )
 
 type Sum struct {
+	name          string
 	sumColumnInfo merger.ColumnInfo
 }
 
@@ -53,11 +54,12 @@ func (s *Sum) ColumnInfo() merger.ColumnInfo {
 }
 
 func (s *Sum) Name() string {
-	return "SUM"
+	return s.name
 }
 
 func NewSum(info merger.ColumnInfo) *Sum {
 	return &Sum{
+		name:          "SUM",
 		sumColumnInfo: info,
 	}
 }

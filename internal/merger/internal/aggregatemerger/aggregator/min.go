@@ -23,6 +23,7 @@ import (
 )
 
 type Min struct {
+	name          string
 	minColumnInfo merger.ColumnInfo
 }
 
@@ -53,11 +54,12 @@ func (m *Min) ColumnInfo() merger.ColumnInfo {
 }
 
 func (m *Min) Name() string {
-	return "MIN"
+	return m.name
 }
 
 func NewMin(info merger.ColumnInfo) *Min {
 	return &Min{
+		name:          "MIN",
 		minColumnInfo: info,
 	}
 }

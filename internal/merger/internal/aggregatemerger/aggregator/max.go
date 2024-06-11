@@ -23,6 +23,7 @@ import (
 )
 
 type Max struct {
+	name          string
 	maxColumnInfo merger.ColumnInfo
 }
 
@@ -52,11 +53,12 @@ func (m *Max) ColumnInfo() merger.ColumnInfo {
 }
 
 func (m *Max) Name() string {
-	return "MAX"
+	return m.name
 }
 
 func NewMax(info merger.ColumnInfo) *Max {
 	return &Max{
+		name:          "MAX",
 		maxColumnInfo: info,
 	}
 }

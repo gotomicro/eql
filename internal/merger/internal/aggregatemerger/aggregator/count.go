@@ -23,6 +23,7 @@ import (
 )
 
 type Count struct {
+	name      string
 	countInfo merger.ColumnInfo
 }
 
@@ -52,11 +53,12 @@ func (s *Count) ColumnInfo() merger.ColumnInfo {
 }
 
 func (s *Count) Name() string {
-	return "COUNT"
+	return s.name
 }
 
 func NewCount(info merger.ColumnInfo) *Count {
 	return &Count{
+		name:      "COUNT",
 		countInfo: info,
 	}
 }
