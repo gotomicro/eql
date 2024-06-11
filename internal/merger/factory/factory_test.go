@@ -466,7 +466,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 0).AddRow(3, 1))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 1).AddRow(4, 0))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: nil,
@@ -516,7 +516,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{3, 1},
 					[]any{2, 1},
 					[]any{4, 0},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 别名
@@ -529,7 +529,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(100, 3))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(150, 2))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(50, 1))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.AggregateFunc},
@@ -584,7 +584,7 @@ func (s *factoryTestSuite) TestSELECT() {
 
 				require.Equal(t, []any{
 					[]any{300, 6},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 聚合函数
@@ -597,7 +597,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(200, 200, 200, 400, 2, 400, 2))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(150, 150, 150, 450, 3, 450, 3))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(50, 50, 50, 50, 1, 50, 1))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.AggregateFunc},
@@ -693,7 +693,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				avg := float64(sum) / float64(cnt)
 				require.Equal(t, []any{
 					[]any{50, 200, avg, sum, cnt},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// ORDER BY
@@ -782,7 +782,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, "oid5").AddRow(1, "oid4").AddRow(3, "oid7").AddRow(3, "oid6"))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, "oid3").AddRow(2, "oid2").AddRow(4, "oid1"))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.OrderBy},
@@ -868,7 +868,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{3, "oid7"},
 					[]any{3, "oid6"},
 					[]any{4, "oid1"},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 聚合函数 + ORDER BY
@@ -882,7 +882,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(50, 200, 4))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(75, 150, 2))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(40, 40, 1))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.AggregateFunc, query.OrderBy},
@@ -953,7 +953,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				avg := float64(200+150+40) / float64(4+2+1)
 				require.Equal(t, []any{
 					[]any{avg},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		{
@@ -967,7 +967,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(4))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.AggregateFunc, query.OrderBy},
@@ -985,7 +985,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "COUNT",
 						Alias:         "`cnt_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 				},
 			},
@@ -1005,7 +1005,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "COUNT",
 						Alias:         "`cnt_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 				},
 			},
@@ -1027,7 +1027,7 @@ func (s *factoryTestSuite) TestSELECT() {
 
 				require.Equal(t, []any{
 					[]any{4 + 2 + 1},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// GROUP BY
@@ -1214,7 +1214,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(3))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(17))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(4))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy},
@@ -1275,7 +1275,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{17},
 					[]any{2},
 					[]any{4},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 非分片键 + 别名
@@ -1288,7 +1288,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(100).AddRow(300))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(100))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(200).AddRow(400))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy},
@@ -1348,7 +1348,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{300},
 					[]any{200},
 					[]any{400},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 非分片键 + 聚合 + 别名
@@ -1361,7 +1361,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1000, 350).AddRow(3000, 350))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1000, 250).AddRow(4000, 50))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2000, 100).AddRow(4000, 50))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy},
@@ -1430,7 +1430,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{int64(3000), 350},
 					[]any{int64(4000), 100},
 					[]any{int64(2000), 100},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 分片键+非分片键+聚合+别名
@@ -1443,7 +1443,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 1000, 350).AddRow(1, 3000, 350))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 1000, 250).AddRow(4, 4000, 50))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(6, 2000, 100).AddRow(9, 4000, 50))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy},
@@ -1535,7 +1535,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{4, int64(4000), 50},
 					[]any{6, int64(2000), 100},
 					[]any{9, int64(4000), 50},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// GROUP BY 和 ORDER BY 组合
@@ -1548,7 +1548,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 3000, 350).AddRow(1, 1000, 350))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, 4000, 50).AddRow(2, 1000, 250))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(9, 4000, 50).AddRow(6, 2000, 100))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy, query.OrderBy},
@@ -1588,7 +1588,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 					{
 						Index: 0,
@@ -1636,7 +1636,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 					{
 						Index: 0,
@@ -1672,7 +1672,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{2, int64(1000), 250},
 					[]any{2, int64(3000), 350},
 					[]any{1, int64(1000), 350},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// LIMIT
@@ -1752,7 +1752,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1).AddRow(3))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(17))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2).AddRow(4))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.Limit},
@@ -1799,7 +1799,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{1},
 					[]any{3},
 					[]any{17},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		{
@@ -1811,7 +1811,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 100).AddRow(3, 100))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, 500).AddRow(3, 200).AddRow(4, 200))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 200).AddRow(4, 200))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
@@ -1842,7 +1842,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         false,
+						Order:         merger.DESC,
 					},
 				},
 				Limit: 2,
@@ -1876,7 +1876,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         false,
+						Order:         merger.DESC,
 					},
 				},
 				Limit: 2,
@@ -1902,7 +1902,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				require.Equal(t, []any{
 					[]any{5, 500},
 					[]any{4, 400},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		{
@@ -1914,7 +1914,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 1000, 100).AddRow(3, 3000, 100))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(5, 5000, 500).AddRow(3, 3000, 200).AddRow(4, 4000, 200))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(2, 2000, 200).AddRow(4, 4001, 200))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
@@ -1955,7 +1955,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 				},
 				Limit: 6,
@@ -1999,7 +1999,7 @@ func (s *factoryTestSuite) TestSELECT() {
 						Name:          "`amount`",
 						AggregateFunc: "SUM",
 						Alias:         "`total_amt`",
-						Order:         true,
+						Order:         merger.ASC,
 					},
 				},
 				Limit: 6,
@@ -2030,7 +2030,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{4, 4001, 200},
 					[]any{3, 3000, 300},
 					[]any{5, 5000, 500},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 		// 聚合 + 非聚合 + GROUP BY + ORDER BY + LIMIT
@@ -2043,7 +2043,7 @@ func (s *factoryTestSuite) TestSELECT() {
 				s.mock01.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 4, 100, 400, 4).AddRow(3, 2, 150, 300, 2))
 				s.mock02.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(4, 1, 200, 200, 1).AddRow(3, 1, 150, 150, 1))
 				s.mock03.ExpectQuery(targetSQL).WillReturnRows(sqlmock.NewRows(cols).AddRow(1, 3, 450, 1350, 3).AddRow(5, 1, 50, 50, 1))
-				return s.getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
+				return getResultSet(t, targetSQL, s.db01, s.db02, s.db03), cols
 			},
 			originSpec: QuerySpec{
 				Features: []query.Feature{query.GroupBy, query.OrderBy, query.Limit},
@@ -2165,7 +2165,7 @@ func (s *factoryTestSuite) TestSELECT() {
 					[]any{3, 3, float64(150)},
 					[]any{5, 1, float64(50)},
 					[]any{4, 1, float64(200)},
-				}, s.getRowValues(t, r, scanFunc))
+				}, getRowValues(t, r, scanFunc))
 			},
 		},
 	}
@@ -2193,7 +2193,7 @@ func (s *factoryTestSuite) TestSELECT() {
 
 }
 
-func (s *factoryTestSuite) getRowValues(t *testing.T, r rows.Rows, scanFunc func(r rows.Rows, valSet *[]any) error) []any {
+func getRowValues(t *testing.T, r rows.Rows, scanFunc func(r rows.Rows, valSet *[]any) error) []any {
 	var res []any
 	for r.Next() {
 		require.NoError(t, scanFunc(r, &res))
@@ -2201,7 +2201,7 @@ func (s *factoryTestSuite) getRowValues(t *testing.T, r rows.Rows, scanFunc func
 	return res
 }
 
-func (s *factoryTestSuite) getResultSet(t *testing.T, sql string, dbs ...*sql.DB) []rows.Rows {
+func getResultSet(t *testing.T, sql string, dbs ...*sql.DB) []rows.Rows {
 	resultSet := make([]rows.Rows, 0, len(dbs))
 	for _, db := range dbs {
 		row, err := db.Query(sql)

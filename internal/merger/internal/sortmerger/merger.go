@@ -201,6 +201,7 @@ func (m *Merger) checkColumns(rows rows.Rows) error {
 
 func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	colsInfo, err := row.ColumnTypes()
+	fmt.Printf("row err = %#v\n", err)
 	if err != nil {
 		return nil, err
 	}
@@ -212,8 +213,10 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 		for colType.Kind() == reflect.Ptr {
 			colType = colType.Elem()
 		}
+		log.Printf("colName = %s, colType = %s\n", colName, colType.String())
 		column := reflect.New(colType).Interface()
 		if sortCols.Has(colName) {
+			log.Printf("sortCols = %#v, colName = %s, colType = %s\n", sortCols, colName, colType.String())
 			sortIndex := sortCols.Find(colName)
 			sortColumns[sortIndex] = column
 		}
@@ -229,6 +232,7 @@ func newNode(row rows.Rows, sortCols sortColumns, index int) (*node, error) {
 	for i := 0; i < len(columns); i++ {
 		columns[i] = reflect.ValueOf(columns[i]).Elem().Interface()
 	}
+	log.Printf("sortColumns = %#v, columns = %#v\n", sortColumns, columns)
 	return &node{
 		sortCols: sortColumns,
 		columns:  columns,

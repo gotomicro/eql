@@ -86,17 +86,11 @@ func (q QuerySpec) validateSelect() error {
 		return fmt.Errorf("%w: select", ErrEmptyColumnList)
 	}
 	for i, c := range q.Select {
-		if i != c.Index || !q.isValidColumnInfo(c) {
+		if i != c.Index || !c.Validate() {
 			return fmt.Errorf("%w: select %v", ErrInvalidColumnInfo, c.Name)
 		}
 	}
 	return nil
-}
-
-func (q QuerySpec) isValidColumnInfo(c merger.ColumnInfo) bool {
-	// ColumnInfo.Name中不能包含括号,也就是聚合函数, name = `id`, 而不是name = count(`id`)
-	// 聚合函数需要写在aggregateFunc字段中
-	return !strings.Contains(c.Name, "(")
 }
 
 func (q QuerySpec) validateGroupBy() error {
@@ -107,7 +101,7 @@ func (q QuerySpec) validateGroupBy() error {
 		return fmt.Errorf("%w: groupby", ErrEmptyColumnList)
 	}
 	for _, c := range q.GroupBy {
-		if !q.isValidColumnInfo(c) {
+		if !c.Validate() {
 			return fmt.Errorf("%w: groupby %v", ErrInvalidColumnInfo, c.Name)
 		}
 		// 清除ASC
@@ -136,7 +130,7 @@ func (q QuerySpec) validateOrderBy() error {
 	}
 	for _, c := range q.OrderBy {
 
-		if !q.isValidColumnInfo(c) {
+		if !c.Validate() {
 			return fmt.Errorf("%w: orderby %v", ErrInvalidColumnInfo, c.Name)
 		}
 		// 清除ASC

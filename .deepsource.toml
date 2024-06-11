@@ -21,3 +21,4 @@ enabled = true
   [analyzers.meta]
   import_root = "github.com/ecodeclub/eorm"
   dependencies_vendored = false
+  cyclomatic_complexity_threshold = "high"
