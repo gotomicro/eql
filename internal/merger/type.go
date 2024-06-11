@@ -17,6 +17,7 @@ package merger
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ecodeclub/eorm/internal/rows"
 )
@@ -50,4 +51,10 @@ func NewColumnInfo(index int, name string) ColumnInfo {
 		Index: index,
 		Name:  name,
 	}
+}
+
+func (c ColumnInfo) Validate() bool {
+	// ColumnInfo.Name中不能包含括号,也就是聚合函数, name = `id`, 而不是name = count(`id`)
+	// 聚合函数需要写在aggregateFunc字段中
+	return !strings.Contains(c.Name, "(")
 }
