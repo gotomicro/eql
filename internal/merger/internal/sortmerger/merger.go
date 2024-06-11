@@ -84,8 +84,8 @@ type Merger struct {
 	preScanAll bool
 }
 
-// NewMerger
-// preScanAll为true 表示需要预先扫描出结果集中的所有数据到内存才能得到正确结果,为false每次只需要扫描一行即可得到正确结果
+// NewMerger 根据preScanAll及排序列的列信息来创建一个排序Merger
+// 其中preScanAll为true 表示需要预先扫描出结果集中的所有数据到内存才能得到正确结果,为false每次只需要扫描一行即可得到正确结果
 func NewMerger(preScanAll bool, sortCols ...SortColumn) (*Merger, error) {
 	scs, err := newSortColumns(sortCols...)
 	if err != nil {
