@@ -34,12 +34,12 @@ import (
 )
 
 var (
-	ErrInvalidColumnInfo          = errors.New("factory: ColumnInfo非法")
-	ErrEmptyColumnList            = errors.New("factory: 列列表为空")
-	ErrColumnNotFoundInSelectList = errors.New("factory: Select列表中未找到列")
-	ErrInvalidLimit               = errors.New("factory: Limit小于1")
-	ErrInvalidOffset              = errors.New("factory: Offset不等于0")
-	ErrInvalidFeatures            = errors.New("factory: Features非法")
+	ErrInvalidColumnInfo          = errors.New("merger: ColumnInfo非法")
+	ErrEmptyColumnList            = errors.New("merger: 列列表为空")
+	ErrColumnNotFoundInSelectList = errors.New("merger: Select列表中未找到列")
+	ErrInvalidLimit               = errors.New("merger: Limit小于1")
+	ErrInvalidOffset              = errors.New("merger: Offset不等于0")
+	ErrInvalidFeatures            = errors.New("merger: Features非法")
 )
 
 type (
@@ -62,31 +62,19 @@ type (
 )
 
 func (q QuerySpec) Validate() error {
-
-	if err := q.validateFeatures(); err != nil {
-		return err
+	validateFuncs := []func() error{
+		q.validateFeatures,
+		q.validateSelect,
+		q.validateGroupBy,
+		q.validateDistinct,
+		q.validateOrderBy,
+		q.validateLimit,
 	}
-
-	if err := q.validateSelect(); err != nil {
-		return err
+	for _, f := range validateFuncs {
+		if err := f(); err != nil {
+			return err
+		}
 	}
-
-	if err := q.validateGroupBy(); err != nil {
-		return err
-	}
-
-	if err := q.validateDistinct(); err != nil {
-		return err
-	}
-
-	if err := q.validateOrderBy(); err != nil {
-		return err
-	}
-
-	if err := q.validateLimit(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -199,6 +187,51 @@ func (q QuerySpec) validateLimit() error {
 	return nil
 }
 
+// New 根据原SQL查询特征、目标SQL查询特征创建、组合merger的工厂方法
+func New(origin, target QuerySpec) (merger.Merger, error) {
+	for _, spec := range []QuerySpec{origin, target} {
+		if err := spec.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	var mp = map[query.Feature]newMergerFunc{
+		query.AggregateFunc: newAggregateMerger,
+		query.GroupBy:       newGroupByMergerWithoutHaving,
+		query.Distinct:      newDistinctMerger,
+		query.OrderBy:       newOrderByMerger,
+	}
+	var mergers []merger.Merger
+	for _, feature := range target.Features {
+		switch feature {
+		case query.AggregateFunc, query.GroupBy, query.Distinct, query.OrderBy:
+			m, err := mp[feature](origin, target)
+			if err != nil {
+				return nil, err
+			}
+			mergers = append(mergers, m)
+		case query.Limit:
+			var prev merger.Merger
+			if len(mergers) == 0 {
+				prev = batchmerger.NewMerger()
+			} else {
+				prev = mergers[len(mergers)-1]
+				mergers = mergers[:len(mergers)-1]
+			}
+			m, err := pagedmerger.NewMerger(prev, target.Offset, target.Limit)
+			if err != nil {
+				return nil, err
+			}
+			mergers = append(mergers, m)
+		default:
+			return nil, fmt.Errorf("%w: feature: %d", ErrInvalidFeatures, feature)
+		}
+	}
+	if len(mergers) == 0 {
+		mergers = append(mergers, batchmerger.NewMerger())
+	}
+	return &pipeline{mergers: mergers}, nil
+}
+
 func newAggregateMerger(origin, target QuerySpec) (merger.Merger, error) {
 	aggregators := getAggregators(origin, target)
 	// TODO: 当aggs为空时, 报不相关的错 merger: scan之前需要调用Next
@@ -262,55 +295,11 @@ func newOrderByMerger(origin, target QuerySpec) (merger.Merger, error) {
 	return sortmerger.NewMerger(isPreScanAll, columns...)
 }
 
-func New(origin, target QuerySpec) (merger.Merger, error) {
-	for _, spec := range []QuerySpec{origin, target} {
-		if err := spec.Validate(); err != nil {
-			return nil, err
-		}
-	}
-	var mp = map[query.Feature]newMergerFunc{
-		query.AggregateFunc: newAggregateMerger,
-		query.GroupBy:       newGroupByMergerWithoutHaving,
-		query.Distinct:      newDistinctMerger,
-		query.OrderBy:       newOrderByMerger,
-	}
-	var mergers []merger.Merger
-	for _, feature := range target.Features {
-		switch feature {
-		case query.AggregateFunc, query.GroupBy, query.Distinct, query.OrderBy:
-			m, err := mp[feature](origin, target)
-			if err != nil {
-				return nil, err
-			}
-			mergers = append(mergers, m)
-		case query.Limit:
-			var prev merger.Merger
-			if len(mergers) == 0 {
-				prev = batchmerger.NewMerger()
-			} else {
-				prev = mergers[len(mergers)-1]
-				mergers = mergers[:len(mergers)-1]
-			}
-			m, err := pagedmerger.NewMerger(prev, target.Offset, target.Limit)
-			if err != nil {
-				return nil, err
-			}
-			mergers = append(mergers, m)
-		default:
-			return nil, fmt.Errorf("%w: feature: %d", ErrInvalidFeatures, feature)
-		}
-	}
-	if len(mergers) == 0 {
-		mergers = append(mergers, batchmerger.NewMerger())
-	}
-	return &MergerPipeline{mergers: mergers}, nil
-}
-
-type MergerPipeline struct {
+type pipeline struct {
 	mergers []merger.Merger
 }
 
-func (m *MergerPipeline) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, error) {
+func (m *pipeline) Merge(ctx context.Context, results []rows.Rows) (rows.Rows, error) {
 	r, err := m.mergers[0].Merge(ctx, results)
 	if err != nil {
 		return nil, err
@@ -327,7 +316,7 @@ func (m *MergerPipeline) Merge(ctx context.Context, results []rows.Rows) (rows.R
 	return r, nil
 }
 
-// NewBatchMerger 仅供sharding_select通过测试使用,后续重构并删掉该方法并只保留上方New方法
+// NewBatchMerger 仅供sharding_select.go使用,后续重构后需要删掉该方法并只保留上方New方法
 func NewBatchMerger() (merger.Merger, error) {
 	return batchmerger.NewMerger(), nil
 }
