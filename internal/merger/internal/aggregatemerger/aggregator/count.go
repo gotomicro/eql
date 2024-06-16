@@ -64,7 +64,7 @@ func countAggregate[T AggregateElement](cols [][]any, countIndex int) (any, erro
 	}
 	return count, nil
 }
-func (s *Count) countNullAbleAggregator(colsData [][]any, countIndex int) (any, error) {
+func (*Count) countNullAbleAggregator(colsData [][]any, countIndex int) (any, error) {
 	notNullCols, kind := nullAbleAggregator(colsData, countIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {

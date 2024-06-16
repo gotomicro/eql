@@ -66,7 +66,7 @@ func sumAggregate[T AggregateElement](cols [][]any, sumIndex int) (any, error) {
 	return sum, nil
 }
 
-func (s *Sum) sumNullAbleAggregator(colsData [][]any, sumIndex int) (any, error) {
+func (*Sum) sumNullAbleAggregator(colsData [][]any, sumIndex int) (any, error) {
 	notNullCols, kind := nullAbleAggregator(colsData, sumIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {

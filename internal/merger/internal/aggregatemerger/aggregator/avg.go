@@ -152,7 +152,7 @@ func (a *AVG) avgNullAbleAggregator(cols [][]any, sumIndex int, countIndex int) 
 	}, nil
 }
 
-func (a *AVG) getEmptyVal(cols []any, index int) any {
+func (*AVG) getEmptyVal(cols []any, index int) any {
 	var emptyVal any
 	col := cols[index]
 	if reflect.TypeOf(col).Kind() == reflect.Struct {

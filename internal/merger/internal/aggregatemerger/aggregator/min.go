@@ -62,7 +62,7 @@ func minAggregator[T AggregateElement](colsData [][]any, minIndex int) (any, err
 	return findExtremeValue[T](colsData, isMinValue[T], minIndex)
 }
 
-func (m *Min) minNullAbleAggregator(colsData [][]any, minIndex int) (any, error) {
+func (*Min) minNullAbleAggregator(colsData [][]any, minIndex int) (any, error) {
 	notNullCols, kind := nullAbleAggregator(colsData, minIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {
