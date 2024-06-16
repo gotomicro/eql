@@ -86,28 +86,28 @@ func avgAggregator[S AggregateElement, C AggregateElement](cols [][]any, sumInde
 func (a *AVG) avgNullableAggregator(cols [][]any, sumIndex int, countIndex int) (any, error) {
 	notNullCols := make([][]any, 0, len(cols))
 	var sumValKind, countValKind reflect.Kind
-	var sumEmptyVal, countEmptyVal any
+	var sumZeroVal, countZeroVal any
 	for _, col := range cols {
-		sumEmptyVal = a.getEmptyVal(col, sumIndex)
-		if sumEmptyVal != nil {
+		sumZeroVal = a.getZeroVal(col, sumIndex)
+		if sumZeroVal != nil {
 			break
 		}
 	}
 	for _, col := range cols {
-		countEmptyVal = a.getEmptyVal(col, countIndex)
-		if countEmptyVal != nil {
+		countZeroVal = a.getZeroVal(col, countIndex)
+		if countZeroVal != nil {
 			break
 		}
 	}
 	for _, col := range cols {
 		var sumVal, countVal any
 		var kind reflect.Kind
-		col, sumVal, kind = a.setColInfo(col, sumIndex, sumEmptyVal)
+		col, sumVal, kind = a.setColInfo(col, sumIndex, sumZeroVal)
 		// 需要不为nil
 		if kind != reflect.Invalid {
 			sumValKind = kind
 		}
-		col, countVal, kind = a.setColInfo(col, countIndex, countEmptyVal)
+		col, countVal, kind = a.setColInfo(col, countIndex, countZeroVal)
 		// 需要不为nil
 		if kind != reflect.Invalid {
 			countValKind = kind
@@ -130,7 +130,7 @@ func (a *AVG) avgNullableAggregator(cols [][]any, sumIndex int, countIndex int) 
 	}, nil
 }
 
-func (*AVG) getEmptyVal(cols []any, index int) any {
+func (*AVG) getZeroVal(cols []any, index int) any {
 	var emptyVal any
 	col := cols[index]
 	if reflect.TypeOf(col).Kind() == reflect.Struct {
