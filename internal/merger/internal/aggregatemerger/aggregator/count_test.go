@@ -152,7 +152,7 @@ func TestCount_Aggregate(t *testing.T) {
 			wantVal:    int64(25),
 		},
 		{
-			name: "有列为nullable类型有不是的",
+			name: "表示 三者混合情况",
 			input: [][]any{
 				{
 					sql.NullInt64{
@@ -161,14 +161,14 @@ func TestCount_Aggregate(t *testing.T) {
 					},
 				},
 				{
-					int64(9),
+					sql.NullInt64{Valid: false},
 				},
 				{
 					int64(8),
 				},
 			},
 			countIndex: 0,
-			wantVal:    int64(25),
+			wantVal:    int64(16),
 		},
 	}
 	for _, tc := range testcases {

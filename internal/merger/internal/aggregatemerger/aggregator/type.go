@@ -34,8 +34,8 @@ type Aggregator interface {
 	Name() string
 }
 
-// 处理查询到的nullable类型的数据，第一个返回值为 非null的数据 如果是sql.nullfloat64{value: 1.1,valid: true},返回的就是1.1 。 第二个返回值为value的kind
-func nullAbleAggregator(colsData [][]any, index int) ([][]any, reflect.Kind) {
+// nullableAggregator 处理查询到的nullable类型的数据，第一个返回值为 非null的数据 如果是sql.nullfloat64{value: 1.1,valid: true},返回的就是1.1,第二个返回值为value的kind
+func nullableAggregator(colsData [][]any, index int) ([][]any, reflect.Kind) {
 	notNullCols := make([][]any, 0, len(colsData))
 	var kind reflect.Kind
 	for _, colData := range colsData {

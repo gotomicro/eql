@@ -151,7 +151,7 @@ func TestMin_Aggregate(t *testing.T) {
 			wantVal:  2.2,
 		},
 		{
-			name: "有列为nullable类型有不是的",
+			name: "三者混合情况",
 			input: [][]any{
 				{
 					sql.NullFloat64{
@@ -161,8 +161,7 @@ func TestMin_Aggregate(t *testing.T) {
 				},
 				{
 					sql.NullFloat64{
-						Float64: 5.6,
-						Valid:   true,
+						Valid: false,
 					},
 				},
 				{

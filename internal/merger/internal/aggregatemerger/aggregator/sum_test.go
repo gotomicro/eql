@@ -153,7 +153,7 @@ func TestSum_Aggregate(t *testing.T) {
 			wantVal:  11.2,
 		},
 		{
-			name: "有为nullable类型有不是nullable类型的",
+			name: "表示三者混合的情况",
 			input: [][]any{
 				{
 					sql.NullFloat64{
@@ -166,13 +166,12 @@ func TestSum_Aggregate(t *testing.T) {
 				},
 				{
 					sql.NullFloat64{
-						Valid:   true,
-						Float64: 3.4,
+						Valid: false,
 					},
 				},
 			},
 			sumIndex: 0,
-			wantVal:  11.2,
+			wantVal:  7.8,
 		},
 	}
 	for _, tc := range testcases {

@@ -40,7 +40,7 @@ func (m *Min) findMinFunc(col []any) (func([][]any, int) (any, error), error) {
 	if minIndex < 0 || minIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	return m.minNullAbleAggregator, nil
+	return m.minNullableAggregator, nil
 }
 
 func (m *Min) ColumnInfo() merger.ColumnInfo {
@@ -62,8 +62,8 @@ func minAggregator[T AggregateElement](colsData [][]any, minIndex int) (any, err
 	return findExtremeValue[T](colsData, isMinValue[T], minIndex)
 }
 
-func (*Min) minNullAbleAggregator(colsData [][]any, minIndex int) (any, error) {
-	notNullCols, kind := nullAbleAggregator(colsData, minIndex)
+func (*Min) minNullableAggregator(colsData [][]any, minIndex int) (any, error) {
+	notNullCols, kind := nullableAggregator(colsData, minIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {
 		return colsData[0][minIndex], nil

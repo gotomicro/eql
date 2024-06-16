@@ -151,7 +151,7 @@ func TestMax_Aggregate(t *testing.T) {
 			wantVal:  5.6,
 		},
 		{
-			name: "有列为nullable类型有不是的",
+			name: "表示 三者混合情况",
 			input: [][]any{
 				{
 					sql.NullFloat64{
@@ -161,8 +161,7 @@ func TestMax_Aggregate(t *testing.T) {
 				},
 				{
 					sql.NullFloat64{
-						Float64: 5.6,
-						Valid:   true,
+						Valid: false,
 					},
 				},
 				{
@@ -170,7 +169,7 @@ func TestMax_Aggregate(t *testing.T) {
 				},
 			},
 			maxIndex: 0,
-			wantVal:  5.6,
+			wantVal:  3.4,
 		},
 	}
 	for _, tc := range testcases {

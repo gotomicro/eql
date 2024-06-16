@@ -33,7 +33,7 @@ type AVG struct {
 	countColumnInfo merger.ColumnInfo
 }
 
-// NewAVG sumInfo是sum的信息，countInfo是count的信息，avgName用于Column方法
+// NewAVG avgInfo是avg列的信息, sumInfo是sum列的信息，countInfo是count列的信息
 func NewAVG(avgInfo, sumInfo, countInfo merger.ColumnInfo) *AVG {
 	return &AVG{
 		name:            "AVG",
@@ -59,7 +59,7 @@ func (a *AVG) findAvgFunc(col []any) (func([][]any, int, int) (any, error), erro
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
 
-	return a.avgNullAbleAggregator, nil
+	return a.avgNullableAggregator, nil
 }
 
 func (a *AVG) ColumnInfo() merger.ColumnInfo {
@@ -83,56 +83,34 @@ func avgAggregator[S AggregateElement, C AggregateElement](cols [][]any, sumInde
 
 }
 
-func (a *AVG) avgNullAbleAggregator(cols [][]any, sumIndex int, countIndex int) (any, error) {
+func (a *AVG) avgNullableAggregator(cols [][]any, sumIndex int, countIndex int) (any, error) {
 	notNullCols := make([][]any, 0, len(cols))
 	var sumValKind, countValKind reflect.Kind
 	var sumEmptyVal, countEmptyVal any
-
 	for _, col := range cols {
 		sumEmptyVal = a.getEmptyVal(col, sumIndex)
 		if sumEmptyVal != nil {
 			break
 		}
 	}
-
 	for _, col := range cols {
 		countEmptyVal = a.getEmptyVal(col, countIndex)
 		if countEmptyVal != nil {
 			break
 		}
 	}
-
 	for _, col := range cols {
-		sumCol := col[sumIndex]
-		countCol := col[countIndex]
-		sumKind := reflect.TypeOf(sumCol).Kind()
-		countKind := reflect.TypeOf(countCol).Kind()
 		var sumVal, countVal any
-		if sumKind == reflect.Struct {
-			// sum列为sql null类型
-			sumVal, _ = col[sumIndex].(driver.Valuer).Value()
-			if sumVal == nil {
-				// 如果是nil用0表示
-				col[sumIndex] = sumEmptyVal
-			} else {
-				sumValKind = reflect.TypeOf(sumVal).Kind()
-				col[sumIndex] = sumVal
-			}
-		} else {
-			sumVal = col[sumIndex]
-			sumValKind = reflect.TypeOf(sumVal).Kind()
+		var kind reflect.Kind
+		col, sumVal, kind = a.setColInfo(col, sumIndex, sumEmptyVal)
+		// 需要不为nil
+		if kind != reflect.Invalid {
+			sumValKind = kind
 		}
-		if countKind == reflect.Struct {
-			countVal, _ = col[countIndex].(driver.Valuer).Value()
-			if countVal == nil {
-				col[countIndex] = countEmptyVal
-			} else {
-				countValKind = reflect.TypeOf(countVal).Kind()
-				col[countIndex] = countVal
-			}
-		} else {
-			countVal = col[countIndex]
-			countValKind = reflect.TypeOf(countVal).Kind()
+		col, countVal, kind = a.setColInfo(col, countIndex, countEmptyVal)
+		// 需要不为nil
+		if kind != reflect.Invalid {
+			countValKind = kind
 		}
 		// 都为nil就没必要进行聚合函数计算了
 		if sumVal != nil || countVal != nil {
@@ -164,6 +142,28 @@ func (*AVG) getEmptyVal(cols []any, index int) any {
 		emptyVal = reflect.Zero(reflect.TypeOf(col)).Interface()
 	}
 	return emptyVal
+}
+
+func (*AVG) setColInfo(col []any, index int, emptyVal any) ([]any, any, reflect.Kind) {
+	indexCol := col[index]
+	indexValKind := reflect.Invalid
+	indexKind := reflect.TypeOf(indexCol).Kind()
+	var colVal any
+	if indexKind == reflect.Struct {
+		// sum列为sql null类型
+		colVal, _ = col[index].(driver.Valuer).Value()
+		if colVal == nil {
+			// 如果是nil用0这些初值表示
+			col[index] = emptyVal
+		} else {
+			indexValKind = reflect.TypeOf(colVal).Kind()
+			col[index] = colVal
+		}
+	} else {
+		colVal = col[index]
+		indexValKind = reflect.TypeOf(colVal).Kind()
+	}
+	return col, colVal, indexValKind
 }
 
 var avgAggregateFuncMapping = map[[2]reflect.Kind]func([][]any, int, int) (any, error){

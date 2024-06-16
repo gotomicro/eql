@@ -40,7 +40,7 @@ func (s *Sum) findSumFunc(col []any) (func([][]any, int) (any, error), error) {
 	if sumIndex < 0 || sumIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	return s.sumNullAbleAggregator, nil
+	return s.sumNullableAggregator, nil
 }
 
 func (s *Sum) ColumnInfo() merger.ColumnInfo {
@@ -66,8 +66,8 @@ func sumAggregate[T AggregateElement](cols [][]any, sumIndex int) (any, error) {
 	return sum, nil
 }
 
-func (*Sum) sumNullAbleAggregator(colsData [][]any, sumIndex int) (any, error) {
-	notNullCols, kind := nullAbleAggregator(colsData, sumIndex)
+func (*Sum) sumNullableAggregator(colsData [][]any, sumIndex int) (any, error) {
+	notNullCols, kind := nullableAggregator(colsData, sumIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {
 		return colsData[0][sumIndex], nil
