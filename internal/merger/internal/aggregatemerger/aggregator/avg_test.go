@@ -15,6 +15,7 @@
 package aggregator
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/ecodeclub/eorm/internal/merger"
@@ -85,6 +86,173 @@ func TestAvg_Aggregate(t *testing.T) {
 			},
 			index:   []int{0, 3, 10},
 			wantErr: errs.ErrMergerInvalidAggregateColumnIndex,
+		},
+		{
+			name: "count和sum均为nullable类型",
+			input: [][]any{
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 24,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+				},
+			},
+			index:   []int{0, 1, 2},
+			wantVal: float64(2),
+		},
+		{
+			name: "count和sum既有nullable又有nullable类型的",
+			input: [][]any{
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					int64(4),
+					int64(4),
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+			},
+			index:   []int{0, 1, 2},
+			wantVal: float64(1),
+		},
+		{
+			name: "sum所有列都为nil",
+			input: [][]any{
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					int64(4),
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+			},
+			index: []int{0, 1, 2},
+			wantVal: sql.NullFloat64{
+				Valid: false,
+			},
+		},
+		{
+			name: "count所有列都为nil",
+			input: [][]any{
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: true,
+						Int64: 4,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+			},
+			index: []int{0, 1, 2},
+			wantVal: sql.NullFloat64{
+				Valid: false,
+			},
 		},
 	}
 	for _, tc := range testcases {

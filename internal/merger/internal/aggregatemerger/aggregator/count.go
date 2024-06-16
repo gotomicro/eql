@@ -35,17 +35,11 @@ func (s *Count) Aggregate(cols [][]any) (any, error) {
 	return countFunc(cols, s.countInfo.Index)
 }
 func (s *Count) findCountFunc(col []any) (func([][]any, int) (any, error), error) {
-	var kind reflect.Kind
 	countIndex := s.countInfo.Index
 	if countIndex < 0 || countIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	kind = reflect.TypeOf(col[countIndex]).Kind()
-	countFunc, ok := countAggregateFuncMapping[kind]
-	if !ok {
-		return nil, errs.ErrMergerAggregateFuncNotFound
-	}
-	return countFunc, nil
+	return s.countNullAbleAggregator,nil
 }
 
 func (s *Count) ColumnInfo() merger.ColumnInfo {
@@ -69,6 +63,18 @@ func countAggregate[T AggregateElement](cols [][]any, countIndex int) (any, erro
 		count += col[countIndex].(T)
 	}
 	return count, nil
+}
+func  (s *Count)countNullAbleAggregator(colsData [][]any,  countIndex int) (any, error) {
+	notNullCols,kind := nullAbleAggregator(colsData, countIndex)
+	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
+	if len(notNullCols) == 0 {
+		return colsData[0][countIndex], nil
+	}
+	countFunc, ok := countAggregateFuncMapping[kind]
+	if !ok {
+		return nil, errs.ErrMergerAggregateFuncNotFound
+	}
+	return countFunc(notNullCols, countIndex)
 }
 
 var countAggregateFuncMapping = map[reflect.Kind]func([][]any, int) (any, error){

@@ -36,17 +36,11 @@ func (m *Min) Aggregate(cols [][]any) (any, error) {
 }
 
 func (m *Min) findMinFunc(col []any) (func([][]any, int) (any, error), error) {
-	var kind reflect.Kind
 	minIndex := m.minColumnInfo.Index
 	if minIndex < 0 || minIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	kind = reflect.TypeOf(col[minIndex]).Kind()
-	minFunc, ok := minFuncMapping[kind]
-	if !ok {
-		return nil, errs.ErrMergerAggregateFuncNotFound
-	}
-	return minFunc, nil
+	return m.minNullAbleAggregator, nil
 }
 
 func (m *Min) ColumnInfo() merger.ColumnInfo {
@@ -67,6 +61,20 @@ func NewMin(info merger.ColumnInfo) *Min {
 func minAggregator[T AggregateElement](colsData [][]any, minIndex int) (any, error) {
 	return findExtremeValue[T](colsData, isMinValue[T], minIndex)
 }
+
+func (m *Min)minNullAbleAggregator(colsData [][]any, minIndex int) (any, error) {
+	notNullCols,kind := nullAbleAggregator(colsData,minIndex)
+	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
+	if len(notNullCols) == 0 {
+		return colsData[0][minIndex], nil
+	}
+	minFunc, ok := minFuncMapping[kind]
+	if !ok {
+		return nil, errs.ErrMergerAggregateFuncNotFound
+	}
+	return minFunc(notNullCols, minIndex)
+}
+
 
 var minFuncMapping = map[reflect.Kind]func([][]any, int) (any, error){
 	reflect.Int:     minAggregator[int],

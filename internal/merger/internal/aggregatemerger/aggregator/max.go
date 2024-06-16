@@ -35,17 +35,11 @@ func (m *Max) Aggregate(cols [][]any) (any, error) {
 	return maxFunc(cols, m.maxColumnInfo.Index)
 }
 func (m *Max) findMaxFunc(col []any) (func([][]any, int) (any, error), error) {
-	var kind reflect.Kind
 	maxIndex := m.maxColumnInfo.Index
 	if maxIndex < 0 || maxIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	kind = reflect.TypeOf(col[maxIndex]).Kind()
-	countFunc, ok := maxFuncMapping[kind]
-	if !ok {
-		return nil, errs.ErrMergerAggregateFuncNotFound
-	}
-	return countFunc, nil
+	return m.maxNullAbleAggregator, nil
 }
 
 func (m *Max) ColumnInfo() merger.ColumnInfo {
@@ -65,6 +59,18 @@ func NewMax(info merger.ColumnInfo) *Max {
 
 func maxAggregator[T AggregateElement](colsData [][]any, maxIndex int) (any, error) {
 	return findExtremeValue[T](colsData, isMaxValue[T], maxIndex)
+}
+func (m *Max)maxNullAbleAggregator(colsData [][]any, maxIndex int) (any, error) {
+	notNullCols,kind := nullAbleAggregator(colsData,maxIndex)
+	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
+	if len(notNullCols) == 0 {
+		return colsData[0][maxIndex], nil
+	}
+	maxFunc, ok := maxFuncMapping[kind]
+	if !ok {
+		return nil, errs.ErrMergerAggregateFuncNotFound
+	}
+	return maxFunc(notNullCols, maxIndex)
 }
 
 var maxFuncMapping = map[reflect.Kind]func([][]any, int) (any, error){

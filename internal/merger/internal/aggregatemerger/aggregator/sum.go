@@ -36,17 +36,11 @@ func (s *Sum) Aggregate(cols [][]any) (any, error) {
 }
 
 func (s *Sum) findSumFunc(col []any) (func([][]any, int) (any, error), error) {
-	var kind reflect.Kind
 	sumIndex := s.sumColumnInfo.Index
 	if sumIndex < 0 || sumIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	kind = reflect.TypeOf(col[sumIndex]).Kind()
-	sumFunc, ok := sumAggregateFuncMapping[kind]
-	if !ok {
-		return nil, errs.ErrMergerAggregateFuncNotFound
-	}
-	return sumFunc, nil
+	return s.sumNullAbleAggregator, nil
 }
 
 func (s *Sum) ColumnInfo() merger.ColumnInfo {
@@ -70,6 +64,19 @@ func sumAggregate[T AggregateElement](cols [][]any, sumIndex int) (any, error) {
 		sum += col[sumIndex].(T)
 	}
 	return sum, nil
+}
+
+func (s *Sum)sumNullAbleAggregator(colsData [][]any, sumIndex int) (any, error) {
+	notNullCols,kind := nullAbleAggregator(colsData, sumIndex)
+	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
+	if len(notNullCols) == 0 {
+		return colsData[0][sumIndex], nil
+	}
+	sumFunc, ok := sumAggregateFuncMapping[kind]
+	if !ok {
+		return nil, errs.ErrMergerAggregateFuncNotFound
+	}
+	return sumFunc(notNullCols, sumIndex)
 }
 
 var sumAggregateFuncMapping = map[reflect.Kind]func([][]any, int) (any, error){

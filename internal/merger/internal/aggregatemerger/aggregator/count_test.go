@@ -15,6 +15,7 @@
 package aggregator
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/ecodeclub/eorm/internal/merger"
@@ -76,6 +77,98 @@ func TestCount_Aggregate(t *testing.T) {
 			},
 			countIndex: 20,
 			wantErr:    errs.ErrMergerInvalidAggregateColumnIndex,
+		},
+		{
+			name: "columnInfo为nullable类型",
+			input: [][]any{
+				{
+					sql.NullInt64{
+						Int64: 4,
+						Valid: true,
+					},
+				},
+				{
+					sql.NullFloat64{
+						Valid: false,
+					},
+				},
+				{
+					sql.NullInt64{
+						Valid: true,
+						Int64: 7,
+					},
+				},
+			},
+			countIndex: 0,
+			wantVal:    int64(11),
+		},
+		{
+			name: "所有列查出来的都为null",
+			input: [][]any{
+				{
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+				{
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+				{
+					sql.NullInt64{
+						Valid: false,
+					},
+				},
+			},
+			countIndex: 0,
+			wantVal: sql.NullInt64{
+				Valid: false,
+			},
+		},
+		{
+			name: "所有列查出来的都不是null",
+			input: [][]any{
+				{
+					sql.NullInt64{
+						Int64: 8,
+						Valid: true,
+					},
+				},
+				{
+					sql.NullInt64{
+						Int64: 9,
+						Valid: true,
+					},
+				},
+				{
+					sql.NullInt64{
+						Valid: true,
+						Int64: 8,
+					},
+				},
+			},
+			countIndex: 0,
+			wantVal:    int64(25),
+		},
+		{
+			name: "有列为nullable类型有不是的",
+			input: [][]any{
+				{
+					sql.NullInt64{
+						Int64: 8,
+						Valid: true,
+					},
+				},
+				{
+					int64(9),
+				},
+				{
+					int64(8),
+				},
+			},
+			countIndex: 0,
+			wantVal:    int64(25),
 		},
 	}
 	for _, tc := range testcases {
