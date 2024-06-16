@@ -39,7 +39,7 @@ func (s *Count) findCountFunc(col []any) (func([][]any, int) (any, error), error
 	if countIndex < 0 || countIndex >= len(col) {
 		return nil, errs.ErrMergerInvalidAggregateColumnIndex
 	}
-	return s.countNullAbleAggregator,nil
+	return s.countNullAbleAggregator, nil
 }
 
 func (s *Count) ColumnInfo() merger.ColumnInfo {
@@ -64,8 +64,8 @@ func countAggregate[T AggregateElement](cols [][]any, countIndex int) (any, erro
 	}
 	return count, nil
 }
-func  (s *Count)countNullAbleAggregator(colsData [][]any,  countIndex int) (any, error) {
-	notNullCols,kind := nullAbleAggregator(colsData, countIndex)
+func (s *Count) countNullAbleAggregator(colsData [][]any, countIndex int) (any, error) {
+	notNullCols, kind := nullAbleAggregator(colsData, countIndex)
 	// 说明几个数据库里查出来的数据都为null,返回第一个null值即可
 	if len(notNullCols) == 0 {
 		return colsData[0][countIndex], nil

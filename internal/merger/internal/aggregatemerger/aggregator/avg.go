@@ -83,7 +83,6 @@ func avgAggregator[S AggregateElement, C AggregateElement](cols [][]any, sumInde
 
 }
 
-
 func (a *AVG) avgNullAbleAggregator(cols [][]any, sumIndex int, countIndex int) (any, error) {
 	notNullCols := make([][]any, 0, len(cols))
 	var sumValKind, countValKind reflect.Kind
