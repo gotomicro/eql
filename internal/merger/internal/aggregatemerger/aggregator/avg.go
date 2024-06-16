@@ -131,20 +131,20 @@ func (a *AVG) avgNullableAggregator(cols [][]any, sumIndex int, countIndex int) 
 }
 
 func (*AVG) getZeroVal(cols []any, index int) any {
-	var emptyVal any
+	var zeroVal any
 	col := cols[index]
 	if reflect.TypeOf(col).Kind() == reflect.Struct {
 		colVal, _ := col.(driver.Valuer).Value()
 		if colVal != nil {
-			emptyVal = reflect.Zero(reflect.TypeOf(colVal)).Interface()
+			zeroVal = reflect.Zero(reflect.TypeOf(colVal)).Interface()
 		}
 	} else {
-		emptyVal = reflect.Zero(reflect.TypeOf(col)).Interface()
+		zeroVal = reflect.Zero(reflect.TypeOf(col)).Interface()
 	}
-	return emptyVal
+	return zeroVal
 }
 
-func (*AVG) setColInfo(col []any, index int, emptyVal any) ([]any, any, reflect.Kind) {
+func (*AVG) setColInfo(col []any, index int, zeroVal any) ([]any, any, reflect.Kind) {
 	indexCol := col[index]
 	indexValKind := reflect.Invalid
 	indexKind := reflect.TypeOf(indexCol).Kind()
@@ -154,7 +154,7 @@ func (*AVG) setColInfo(col []any, index int, emptyVal any) ([]any, any, reflect.
 		colVal, _ = col[index].(driver.Valuer).Value()
 		if colVal == nil {
 			// 如果是nil用0这些初值表示
-			col[index] = emptyVal
+			col[index] = zeroVal
 		} else {
 			indexValKind = reflect.TypeOf(colVal).Kind()
 			col[index] = colVal
